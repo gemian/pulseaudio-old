@@ -1,3 +1,17 @@
+pulseaudio (10.0-1+deb9u1) stretch; urgency=medium
+
+  [ Balint Reczey ]
+  * Removing myself from Uploaders.
+    I made a few changes to the package when it badly needed help
+    but now it is well maintained and I haven't contributed to it
+    for years. Thanks to everyone in the packaging team and everyone
+    who improved the package!
+
+  [ Scott Leggett ]
+  * Move AGPL-3 text into copyright file (Closes: #863082)
+
+ -- Felipe Sateler <fsateler@debian.org>  Sun, 18 Jun 2017 12:03:31 -0400
+
 pulseaudio (10.0-1) unstable; urgency=medium
 
   * New upstream release
