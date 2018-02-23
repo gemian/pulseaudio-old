@@ -23,6 +23,7 @@
 
 pulseincludedir=$(includedir)/pulse
 pulsecoreincludedir=$(includedir)/pulsecore
+pulsecorefilterincludedir=$(includedir)/pulsecore/filter
 pulselibexecdir=$(libexecdir)/pulse
 if HAVE_X11
 xdgautostartdir=$(sysconfdir)/xdg/autostart
@@ -813,6 +814,141 @@ libpulsecommon_@PA_MAJORMINOR@_la_LIBADD += $(DBUS_LIBS)
 endif
 
 ###################################
+#         Pulsecore headers       #
+###################################
+
+pulsecoreinclude_HEADERS = \
+		pulsecore/arpa-inet.h \
+		pulsecore/asyncmsgq.h \
+		pulsecore/asyncq.h \
+		pulsecore/atomic.h \
+		pulsecore/aupdate.h \
+		pulsecore/auth-cookie.h \
+		pulsecore/authkey.h \
+		pulsecore/avahi-wrap.h \
+		pulsecore/bitset.h \
+		pulsecore/card.h \
+		pulsecore/cli-command.h \
+		pulsecore/client.h \
+		pulsecore/cli.h \
+		pulsecore/cli-text.h \
+		pulsecore/conf-parser.h \
+		pulsecore/core-error.h \
+		pulsecore/core-format.h \
+		pulsecore/core.h \
+		pulsecore/core-rtclock.h \
+		pulsecore/core-scache.h \
+		pulsecore/core-subscribe.h \
+		pulsecore/core-util.h \
+		pulsecore/cpu-arm.h \
+		pulsecore/cpu.h \
+		pulsecore/cpu-orc.h \
+		pulsecore/cpu-x86.h \
+		pulsecore/creds.h \
+		pulsecore/database.h \
+		pulsecore/dbus-shared.h \
+		pulsecore/dbus-util.h \
+		pulsecore/device-port.h \
+		pulsecore/dynarray.h \
+		pulsecore/endianmacros.h \
+		pulsecore/esound.h \
+		pulsecore/fdsem.h \
+		pulsecore/flist.h \
+		pulsecore/g711.h \
+		pulsecore/hashmap.h \
+		pulsecore/hook-list.h \
+		pulsecore/i18n.h \
+		pulsecore/idxset.h \
+		pulsecore/iochannel.h \
+		pulsecore/ioline.h \
+		pulsecore/ipacl.h \
+		pulsecore/llist.h \
+		pulsecore/lock-autospawn.h \
+		pulsecore/log.h \
+		pulsecore/ltdl-helper.h \
+		pulsecore/macro.h \
+		pulsecore/mcalign.h \
+		pulsecore/memblock.h \
+		pulsecore/memblockq.h \
+		pulsecore/memchunk.h \
+		pulsecore/memtrap.h \
+		pulsecore/mime-type.h \
+		pulsecore/mix.h \
+		pulsecore/modargs.h \
+		pulsecore/modinfo.h \
+		pulsecore/module.h \
+		pulsecore/msgobject.h \
+		pulsecore/mutex.h \
+		pulsecore/namereg.h \
+		pulsecore/native-common.h \
+		pulsecore/object.h \
+		pulsecore/once.h \
+		pulsecore/packet.h \
+		pulsecore/parseaddr.h \
+		pulsecore/pdispatch.h \
+		pulsecore/pid.h \
+		pulsecore/pipe.h \
+		pulsecore/play-memblockq.h \
+		pulsecore/play-memchunk.h \
+		pulsecore/poll.h \
+		pulsecore/proplist-util.h \
+		pulsecore/protocol-cli.h \
+		pulsecore/protocol-dbus.h \
+		pulsecore/protocol-esound.h \
+		pulsecore/protocol-http.h \
+		pulsecore/protocol-native.h \
+		pulsecore/protocol-simple.h \
+		pulsecore/pstream.h \
+		pulsecore/pstream-util.h \
+		pulsecore/queue.h \
+		pulsecore/random.h \
+		pulsecore/ratelimit.h \
+		pulsecore/refcnt.h \
+		pulsecore/remap.h \
+		pulsecore/resampler.h \
+		pulsecore/rtkit.h \
+		pulsecore/rtpoll.h \
+		pulsecore/sample-util.h \
+		pulsecore/sconv.h \
+		pulsecore/sconv-s16be.h \
+		pulsecore/sconv-s16le.h \
+		pulsecore/semaphore.h \
+		pulsecore/shared.h \
+		pulsecore/shm.h \
+		pulsecore/sink.h \
+		pulsecore/sink-input.h \
+		pulsecore/sioman.h \
+		pulsecore/sndfile-util.h \
+		pulsecore/socket-client.h \
+		pulsecore/socket.h \
+		pulsecore/socket-server.h \
+		pulsecore/socket-util.h \
+		pulsecore/sound-file.h \
+		pulsecore/sound-file-stream.h \
+		pulsecore/source.h \
+		pulsecore/source-output.h \
+		pulsecore/srbchannel.h \
+		pulsecore/start-child.h \
+		pulsecore/strbuf.h \
+		pulsecore/stream-util.h \
+		pulsecore/strlist.h \
+		pulsecore/svolume-orc-gen.h \
+		pulsecore/tagstruct.h \
+		pulsecore/thread.h \
+		pulsecore/thread-mq.h \
+		pulsecore/time-smoother.h \
+		pulsecore/tokenizer.h \
+		pulsecore/typedefs.h \
+		pulsecore/usergroup.h \
+		pulsecore/x11prop.h \
+		pulsecore/x11wrap.h
+
+pulsecorefilterinclude_HEADERS = \
+		pulsecore/filter/biquad.h \
+		pulsecore/filter/crossover.h \
+		pulsecore/filter/lfe-filter.h
+
+###################################
 #         Client library          #
 ###################################
 
@@ -1353,6 +1489,17 @@ dist_alsapaths_DATA = \
 
 endif
 
+if HAVE_ANDROID
+modlibexec_LTLIBRARIES += \
+		libdroid-util.la \
+		libdroid-sink.la \
+		libdroid-source.la \
+		module-droid-keepalive.la \
+		module-droid-sink.la \
+		module-droid-source.la \
+		module-droid-card.la
+endif
+
 if HAVE_SOLARIS
 modlibexec_LTLIBRARIES += \
 		module-solaris.la
@@ -1558,6 +1705,16 @@ SYMDEF_FILES = \
 		module-filter-apply-symdef.h \
 		module-filter-heuristics-symdef.h \
 		module-allow-passthrough-symdef.h
+
+if HAVE_ANDROID
+SYMDEF_FILES += \
+		module-droid-discover-symdef.h
+SYMDEF_FILES += \
+		module-droid-sink-symdef.h \
+		module-droid-source-symdef.h \
+		module-droid-card-symdef.h \
+		module-droid-keepalive-symdef.h
+endif
 
 if HAVE_ESOUND
 SYMDEF_FILES += \
@@ -1882,6 +2039,44 @@ module_alsa_card_la_SOURCES = modules/alsa/module-alsa-card.c
 module_alsa_card_la_LDFLAGS = $(MODULE_LDFLAGS)
 module_alsa_card_la_LIBADD = $(MODULE_LIBADD) $(ASOUNDLIB_LIBS) libalsa-util.la
 module_alsa_card_la_CFLAGS = $(AM_CFLAGS) $(ASOUNDLIB_CFLAGS)
+
+# pulseaudio-modules-droid
+if HAVE_ANDROID
+libdroid_util_la_SOURCES = modules/droid/droid-util.c modules/droid/droid-util.h
+libdroid_util_la_LDFLAGS = -avoid-version
+libdroid_util_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS)
+libdroid_util_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS)
+
+libdroid_sink_la_SOURCES = modules/droid/droid-sink.c modules/droid/droid-sink.h
+libdroid_sink_la_LDFLAGS = -avoid-version
+libdroid_sink_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la
+libdroid_sink_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS)
+
+libdroid_source_la_SOURCES = modules/droid/droid-source.c modules/droid/droid-source.h
+libdroid_source_la_LDFLAGS = -avoid-version
+libdroid_source_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la
+libdroid_source_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS)
+
+module_droid_keepalive_la_SOURCES = modules/droid/keepalive.c modules/droid/keepalive.h modules/droid/module-droid-keepalive.c
+module_droid_keepalive_la_LDFLAGS = $(MODULE_LDFLAGS)
+module_droid_keepalive_la_LIBADD = $(MODULE_LIBADD) $(DBUS_LIBS)
+module_droid_keepalive_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
+
+module_droid_sink_la_SOURCES = modules/droid/module-droid-sink.c
+module_droid_sink_la_LDFLAGS = $(MODULE_LDFLAGS)
+module_droid_sink_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la libdroid-sink.la
+module_droid_sink_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS)
+
+module_droid_source_la_SOURCES = modules/droid/module-droid-source.c
+module_droid_source_la_LDFLAGS = $(MODULE_LDFLAGS)
+module_droid_source_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la libdroid-source.la
+module_droid_source_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS)
+
+module_droid_card_la_SOURCES = modules/droid/module-droid-card.c
+module_droid_card_la_LDFLAGS = $(MODULE_LDFLAGS)
+module_droid_card_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la libdroid-sink.la libdroid-source.la
+module_droid_card_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS)
+endif # HAVE_ANDROID
 
 # Solaris
 

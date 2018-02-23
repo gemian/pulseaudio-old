@@ -39,7 +39,7 @@ Build-Depends: debhelper (>= 9.20141010),
     libwrap0-dev,
     libx11-xcb-dev,
     libxcb1-dev (>= 1.6),
-    libxtst-dev
+    libxtst-dev,
 Standards-Version: 3.9.8
 Vcs-Git: https://anonscm.debian.org/git/pkg-pulseaudio/pulseaudio.git
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-pulseaudio/pulseaudio.git
@@ -183,6 +183,20 @@ Description: RAOP module for PulseAudio sound server
  .
  This module enables PulseAudio to stream audio to an Apple Airport Express.
 
+Package: pulseaudio-module-droid
+Architecture: armhf arm64 i386 amd64
+Priority: extra
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Conflicts: pulseaudio (<< 0.9.14-2)
+Description: Android Audio HAL module for PulseAudio sound server
+ PulseAudio, previously known as Polypaudio, is a sound server for POSIX and
+ WIN32 systems. It is a drop in replacement for the ESD sound server with
+ much better latency, mixing/re-sampling quality and overall architecture.
+ .
+ This module enables PulseAudio to work on top of the Android Audio HAL.
+ .
+ The module is called module-droid.
+
 Package: pulseaudio-module-bluetooth
 Build-Profiles: <!stage1>
 Architecture: linux-any
@@ -245,6 +259,14 @@ Description: PulseAudio client libraries (glib support)
  via PulseAudio's native interface.
  .
  This package adds support for glib2 client applications.
+
+Package: pulseaudio-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: ${misc:Depends},
+  pulseaudio (= ${binary:Version})
+Description: Pulsecore development headers
 
 Package: libpulse-dev
 Section: libdevel
