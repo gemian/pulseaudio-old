@@ -24,6 +24,9 @@ DEB_CONFIGURE_EXTRA_FLAGS = --enable-x11 --disable-hal-compat \
   --with-systemduserunitdir=\$${prefix}/lib/systemd/user \
   --disable-bluez4
 
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+# Skip tests on the archs they are known to be flaky with current configuration
+testskip_architectures := arm64
 
 PA_MAJORMINOR = $(shell echo $(DEB_VERSION_UPSTREAM) | sed -r -e 's/^([0-9]+\.[0-9]+).*/\1/')
 
@@ -60,6 +63,11 @@ override_dh_shlibdeps:
 
 override_dh_install:
 	dh_install --fail-missing
+
+override_dh_auto_test:
+ifneq ($(DEB_HOST_ARCH),$(findstring $(DEB_HOST_ARCH), $(testskip_architectures)))
+	CTEST_OUTPUT_ON_FAILURE=1 dh_auto_test
+endif
 
 override_dh_installdocs:
 	dh_installdocs -A NEWS README
