@@ -1497,7 +1497,8 @@ modlibexec_LTLIBRARIES += \
 		module-droid-keepalive.la \
 		module-droid-sink.la \
 		module-droid-source.la \
-		module-droid-card.la
+		module-droid-card.la \
+		module-droid-glue.la
 endif
 
 if HAVE_SOLARIS
@@ -1713,7 +1714,8 @@ SYMDEF_FILES += \
 		module-droid-sink-symdef.h \
 		module-droid-source-symdef.h \
 		module-droid-card-symdef.h \
-		module-droid-keepalive-symdef.h
+		module-droid-keepalive-symdef.h \
+		module-droid-glue-symdef.h
 endif
 
 if HAVE_ESOUND
@@ -2076,6 +2078,11 @@ module_droid_card_la_SOURCES = modules/droid/module-droid-card.c
 module_droid_card_la_LDFLAGS = $(MODULE_LDFLAGS)
 module_droid_card_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la libdroid-sink.la libdroid-source.la
 module_droid_card_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS)
+
+module_droid_glue_la_SOURCES = modules/droid/audioflingerglue-hybris.c modules/droid/module-droid-glue.c
+module_droid_glue_la_LDFLAGS = $(MODULE_LDFLAGS) -lm -lhybris-common
+module_droid_glue_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la
+module_droid_glue_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS) $(LIB_AF_CFLAGS) -I/usr/include/audioflingerglue
 endif # HAVE_ANDROID
 
 # Solaris

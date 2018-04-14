@@ -941,6 +941,21 @@ CC_CHECK_DROID_ENUM([${ANDROID_HEADERS_CFLAGS}], [AUDIO_FORMAT_PCM_OFFLOAD])
 CC_CHECK_DROID_ENUM([${ANDROID_HEADERS_CFLAGS}], [AUDIO_FORMAT_FLAC])
 CC_CHECK_DROID_ENUM([${ANDROID_HEADERS_CFLAGS}], [AUDIO_FORMAT_OPUS])
 
+#### Android HAL audioflinger support####
+audioflingergluename="libaudioflingerglue.so"
+AC_ARG_WITH([audioflingerglue-name],
+        AS_HELP_STRING([--with-audioflingerglue-name], [Audioglingerglue library name (default libaudioflingerglue.so)]),
+        [afname=$withval], [afname=$audioflingergluename]
+        )
+LIB_AF_CFLAGS="-DLIB_AF_NAME=\"\\\"${afname}\\\"\""
+
+audioflingergluebase="/usr/libexec/droid-hybris/system"
+AC_ARG_WITH([audioflingerglue-base],
+        AS_HELP_STRING([--with-audioflingerglue-base], [Audioglingerglue library base path (default /usr/libexec/droid-hybris/system)]),
+        [afpath=$withval], [afpath=$audioflingergluebase]
+        )
+LIB_AF_CFLAGS+=" -DLIB_AF_BASE_PATH=\"\\\"${afpath}\\\"\""
+AC_SUBST([LIB_AF_CFLAGS])
 
 #### EsounD support (optional) ####
 
