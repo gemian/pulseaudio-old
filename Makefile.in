@@ -337,9 +337,13 @@ GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
 GETTEXT_PACKAGE = @GETTEXT_PACKAGE@
 GLIB20_CFLAGS = @GLIB20_CFLAGS@
 GLIB20_LIBS = @GLIB20_LIBS@
+GLIB_COMPILE_SCHEMAS = @GLIB_COMPILE_SCHEMAS@
 GMSGFMT = @GMSGFMT@
 GMSGFMT_015 = @GMSGFMT_015@
 GREP = @GREP@
+GSETTINGS_CFLAGS = @GSETTINGS_CFLAGS@
+GSETTINGS_DISABLE_SCHEMAS_COMPILE = @GSETTINGS_DISABLE_SCHEMAS_COMPILE@
+GSETTINGS_LIBS = @GSETTINGS_LIBS@
 GTK30_CFLAGS = @GTK30_CFLAGS@
 GTK30_LIBS = @GTK30_LIBS@
 HAVE_AF_UNIX = @HAVE_AF_UNIX@
@@ -353,7 +357,9 @@ HAVE_BLUEZ_5_OFONO_HEADSET = @HAVE_BLUEZ_5_OFONO_HEADSET@
 HAVE_COREAUDIO = @HAVE_COREAUDIO@
 HAVE_CXX11 = @HAVE_CXX11@
 HAVE_DBUS = @HAVE_DBUS@
+HAVE_GCONF = @HAVE_GCONF@
 HAVE_GLIB20 = @HAVE_GLIB20@
+HAVE_GSETTINGS = @HAVE_GSETTINGS@
 HAVE_MEMFD = @HAVE_MEMFD@
 HAVE_MKFIFO = @HAVE_MKFIFO@
 HAVE_NEON = @HAVE_NEON@
@@ -532,6 +538,7 @@ datarootdir = @datarootdir@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
+gsettingsschemadir = @gsettingsschemadir@
 host = @host@
 host_alias = @host_alias@
 host_cpu = @host_cpu@
@@ -570,7 +577,6 @@ udevrulesdir = @udevrulesdir@
 zshcompletiondir = @zshcompletiondir@
 ACLOCAL_AMFLAGS = -I m4
 EXTRA_DIST = \
-	AGPL \
 	bootstrap.sh \
 	coverity/model.c \
 	git-version-gen \
@@ -1241,14 +1247,14 @@ uninstall-am: uninstall-cmakeDATA uninstall-dist_bashcompletionDATA \
 
 
 install-bashcompletion-aliases:
-	$(LN_S) -f pulseaudio $(DESTDIR)$(bashcompletiondir)/pactl
-	$(LN_S) -f pulseaudio $(DESTDIR)$(bashcompletiondir)/pacmd
-	$(LN_S) -f pulseaudio $(DESTDIR)$(bashcompletiondir)/pasuspender
-	$(LN_S) -f pulseaudio $(DESTDIR)$(bashcompletiondir)/padsp
-	$(LN_S) -f pulseaudio $(DESTDIR)$(bashcompletiondir)/pacat
-	$(LN_S) -f pulseaudio $(DESTDIR)$(bashcompletiondir)/paplay
-	$(LN_S) -f pulseaudio $(DESTDIR)$(bashcompletiondir)/parec
-	$(LN_S) -f pulseaudio $(DESTDIR)$(bashcompletiondir)/parecord
+	cd $(DESTDIR)$(bashcompletiondir) && $(LN_S) -f pulseaudio pactl
+	cd $(DESTDIR)$(bashcompletiondir) && $(LN_S) -f pulseaudio pacmd
+	cd $(DESTDIR)$(bashcompletiondir) && $(LN_S) -f pulseaudio pasuspender
+	cd $(DESTDIR)$(bashcompletiondir) && $(LN_S) -f pulseaudio padsp
+	cd $(DESTDIR)$(bashcompletiondir) && $(LN_S) -f pulseaudio pacat
+	cd $(DESTDIR)$(bashcompletiondir) && $(LN_S) -f pulseaudio paplay
+	cd $(DESTDIR)$(bashcompletiondir) && $(LN_S) -f pulseaudio parec
+	cd $(DESTDIR)$(bashcompletiondir) && $(LN_S) -f pulseaudio parecord
 
 install-data-hook: install-bashcompletion-aliases
 

@@ -77,8 +77,8 @@ Change the profile of a sink (resp. source).
 \fBset-port-latency-offset\f1 \fIcard-index|card-name\f1 \fIport-name\f1 \fIoffset\f1
 Change the latency offset of a port belonging to the specified card
 .TP
-\fBsuspend-sink|suspend-source\f1 \fIindex|name\f1 \fIboolean\f1
-Suspend (i.e. disconnect from the underlying hardware) a sink (resp. source).
+\fBsuspend-sink|suspend-source\f1 \fIname|index\f1 \fItrue|false\f1
+Suspend or resume the specified sink or source (which may be specified either by its name or index), depending whether true (suspend) or false (resume) is passed as last argument. Suspending a sink will pause all playback and suspending a source will pause all capturing. Depending on the module implementing the sink or source this might have the effect that the underlying device is closed, making it available for other applications to use. The exact behaviour depends on the module. 
 .TP
 \fBsuspend\f1 \fIboolean\f1
 Suspend all sinks and sources.
