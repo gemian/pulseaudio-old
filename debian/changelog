@@ -6,6 +6,7 @@ pulseaudio (11.99.1-1) experimental; urgency=medium
   * Install new module always-source into pulseaudio package
   * Build and install the gsettings module.
     Disable the gconf module as it is superseded by gsettings
+    Closes: #757909
   * Add new libpulse0 functions to the symbols file
 
  -- Felipe Sateler <fsateler@debian.org>  Sun, 13 May 2018 12:35:13 -0400
