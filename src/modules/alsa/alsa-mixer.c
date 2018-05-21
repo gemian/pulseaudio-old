@@ -3989,6 +3989,7 @@ static int mapping_verify(pa_alsa_mapping *m, const pa_channel_map *bonus) {
     static const struct description_map well_known_descriptions[] = {
         { "analog-mono",            N_("Analog Mono") },
         { "analog-stereo",          N_("Analog Stereo") },
+        { "stereo-fallback",        N_("Stereo") },
         /* Note: Not translated to "Analog Stereo Input", because the source
          * name gets "Input" appended to it automatically, so adding "Input"
          * here would lead to the source name to become "Analog Stereo Input
@@ -4015,7 +4016,7 @@ static int mapping_verify(pa_alsa_mapping *m, const pa_channel_map *bonus) {
         { "iec958-ac3-surround-51", N_("Digital Surround 5.1 (IEC958/AC3)") },
         { "iec958-dts-surround-51", N_("Digital Surround 5.1 (IEC958/DTS)") },
         { "hdmi-stereo",            N_("Digital Stereo (HDMI)") },
-        { "hdmi-surround-51",       N_("Digital Surround 5.1 (HDMI)") }
+        { "hdmi-surround-51",       N_("Digital Surround 5.1 (HDMI)") },
     };
 
     pa_assert(m);
@@ -4152,6 +4153,7 @@ static int profile_verify(pa_alsa_profile *p) {
         { "output:analog-stereo+input:analog-stereo", N_("Analog Stereo Duplex") },
         { "output:iec958-stereo+input:iec958-stereo", N_("Digital Stereo Duplex (IEC958)") },
         { "output:multichannel-output+input:multichannel-input", N_("Multichannel Duplex") },
+        { "output:unknown-stereo+input:unknown-stereo", N_("Stereo Duplex") },
         { "off",                                      N_("Off") }
     };
 

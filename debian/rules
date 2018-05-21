@@ -35,7 +35,7 @@ ifeq ($(words $(sort $(filter stage1,$(DEB_BUILD_PROFILES)))),1)
 endif
 
 %:
-	dh $@ --with autoreconf
+	dh $@
 
 
 override_dh_auto_configure:
@@ -61,8 +61,14 @@ override_dh_makeshlibs:
 override_dh_shlibdeps:
 	dh_shlibdeps --libpackage=pulseaudio
 
-override_dh_install:
-	dh_install --fail-missing
+override_dh_missing:
+	dh_missing --fail-missing
+
+override_dh_link:
+	dh_link
+ifeq ($(DEB_HOST_ARCH_OS),linux)
+	dh_link usr/lib/systemd/user/pulseaudio.socket usr/lib/systemd/user/sockets.target.wants/pulseaudio.socket
+endif
 
 override_dh_auto_test:
 ifneq ($(DEB_HOST_ARCH),$(findstring $(DEB_HOST_ARCH), $(testskip_architectures)))
