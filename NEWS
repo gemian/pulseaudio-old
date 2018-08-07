@@ -1,3 +1,29 @@
+PulseAudio 12.2
+
+The previous release tarball contained a broken configure script, this release
+fixes the tarball. There are no changes in the source, except for this NEWS
+file update.
+
+Contributors
+
+  Tanu Kaskinen
+
+
+PulseAudio 12.1
+
+A bug fix release.
+
+ * Fixed crash when switching to A2DP bluetooth profile
+ * Fixed plugin search path in module-ladspa-sink
+ * Fixed file permissions for the pipes created by module-pipe-sink and
+   module-pipe-source
+
+Contributors
+
+  Mr. M
+  Tanu Kaskinen
+
+
 PulseAudio 12.0
 
 Changes at a glance:
