@@ -44,8 +44,6 @@
 
 #include <droid/droid-util.h>
 
-#include "module-droid-glue-symdef.h"
-
 #include <hybris/common/binding.h>
 #include "audioflingerglue.h"
 

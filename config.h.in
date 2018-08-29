@@ -68,6 +68,9 @@
 /* Define to 1 if you have the <atomic_ops.h> header file. */
 #undef HAVE_ATOMIC_OPS_H
 
+/* Define to 1 if immediate binding is available */
+#undef HAVE_BIND_NOW
+
 /* Bluez 5 native headset backend enabled */
 #undef HAVE_BLUEZ_5_NATIVE_HEADSET
 
@@ -99,6 +102,9 @@
 
 /* Define to 1 if you have the <CoreAudio/CoreAudio.h> header file. */
 #undef HAVE_COREAUDIO_COREAUDIO_H
+
+/* Define to 1 if you have the <cpuid.h> header file. */
+#undef HAVE_CPUID_H
 
 /* Define to 1 if you have the `ctime_r' function. */
 #undef HAVE_CTIME_R
@@ -251,6 +257,9 @@
 
 /* Have memfd shared memory. */
 #undef HAVE_MEMFD
+
+/* Define to 1 if you have the `memfd_create' function. */
+#undef HAVE_MEMFD_CREATE
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H

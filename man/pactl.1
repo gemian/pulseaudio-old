@@ -60,11 +60,11 @@ Move the specified playback stream (identified by its numerical index) to the sp
 \fBmove-source-output\f1 \fIID\f1 \fISOURCE\f1
 Move the specified recording stream (identified by its numerical index) to the specified source (identified by its symbolic name or numerical index).
 .TP
-\fBsuspend-sink\f1 \fISINK\f1 \fI1|0\f1
-Suspend or resume the specified sink (which may be specified either by its symbolic name, or by its numeric index), depending whether 1 (suspend) or 0 (resume) is passed as last argument. Suspending a sink will pause all playback. Depending on the module implementing the sink this might have the effect that the underlying device is closed, making it available for other applications to use. The exact behaviour depends on the module.
+\fBsuspend-sink\f1 \fISINK\f1 \fItrue|false\f1
+Suspend or resume the specified sink (which may be specified either by its name or index), depending whether true (suspend) or false (resume) is passed as last argument. Suspending a sink will pause all playback. Depending on the module implementing the sink this might have the effect that the underlying device is closed, making it available for other applications to use. The exact behaviour depends on the module. 
 .TP
-\fBsuspend-source\f1 \fISOURCE\f1 \fI1|0\f1
-Suspend or resume the specified source (which may be specified either by its symbolic name, or by its numeric index), depending whether 1 (suspend) or 0 (resume) is passed as last argument. Suspending a source will pause all capturing. Depending on the module implementing the source this might have the effect that the underlying device is closed, making it available for other applications to use. The exact behaviour depends on the module.
+\fBsuspend-source\f1 \fISOURCE\f1 \fItrue|false\f1
+Suspend or resume the specified source (which may be specified either by its name or index), depending whether true (suspend) or false (resume) is passed as last argument. Suspending a source will pause all capturing. Depending on the module implementing the source this might have the effect that the underlying device is closed, making it available for other applications to use. The exact behaviour depends on the module. 
 .TP
 \fBset-card-profile\f1 \fICARD\f1 \fIPROFILE\f1
 Set the specified card (identified by its symbolic name or numerical index) to the specified profile (identified by its symbolic name).

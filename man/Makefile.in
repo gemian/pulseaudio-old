@@ -103,6 +103,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+@HAVE_ESOUND_TRUE@am__append_1 = esdcompat.1.xml
+@BUILD_MANPAGES_TRUE@@HAVE_ESOUND_TRUE@am__append_2 = esdcompat.1
 subdir = man
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/acx_libwrap.m4 \
@@ -126,11 +128,11 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 DIST_COMMON = $(srcdir)/Makefile.am $(am__DIST_COMMON)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
-CONFIG_CLEAN_FILES = pulseaudio.1.xml esdcompat.1.xml \
-	pax11publish.1.xml pacat.1.xml pacmd.1.xml pactl.1.xml \
-	pasuspender.1.xml padsp.1.xml pulse-daemon.conf.5.xml \
-	pulse-client.conf.5.xml default.pa.5.xml \
-	pulse-cli-syntax.5.xml start-pulseaudio-x11.1.xml
+CONFIG_CLEAN_FILES = pulseaudio.1.xml pax11publish.1.xml pacat.1.xml \
+	pacmd.1.xml pactl.1.xml pasuspender.1.xml padsp.1.xml \
+	pulse-daemon.conf.5.xml pulse-client.conf.5.xml \
+	default.pa.5.xml pulse-cli-syntax.5.xml \
+	start-pulseaudio-x11.1.xml esdcompat.1.xml
 CONFIG_CLEAN_VPATH_FILES =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -248,9 +250,13 @@ GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
 GETTEXT_PACKAGE = @GETTEXT_PACKAGE@
 GLIB20_CFLAGS = @GLIB20_CFLAGS@
 GLIB20_LIBS = @GLIB20_LIBS@
+GLIB_COMPILE_SCHEMAS = @GLIB_COMPILE_SCHEMAS@
 GMSGFMT = @GMSGFMT@
 GMSGFMT_015 = @GMSGFMT_015@
 GREP = @GREP@
+GSETTINGS_CFLAGS = @GSETTINGS_CFLAGS@
+GSETTINGS_DISABLE_SCHEMAS_COMPILE = @GSETTINGS_DISABLE_SCHEMAS_COMPILE@
+GSETTINGS_LIBS = @GSETTINGS_LIBS@
 GTK30_CFLAGS = @GTK30_CFLAGS@
 GTK30_LIBS = @GTK30_LIBS@
 HAVE_AF_UNIX = @HAVE_AF_UNIX@
@@ -264,7 +270,9 @@ HAVE_BLUEZ_5_OFONO_HEADSET = @HAVE_BLUEZ_5_OFONO_HEADSET@
 HAVE_COREAUDIO = @HAVE_COREAUDIO@
 HAVE_CXX11 = @HAVE_CXX11@
 HAVE_DBUS = @HAVE_DBUS@
+HAVE_GCONF = @HAVE_GCONF@
 HAVE_GLIB20 = @HAVE_GLIB20@
+HAVE_GSETTINGS = @HAVE_GSETTINGS@
 HAVE_MEMFD = @HAVE_MEMFD@
 HAVE_MKFIFO = @HAVE_MKFIFO@
 HAVE_NEON = @HAVE_NEON@
@@ -443,6 +451,7 @@ datarootdir = @datarootdir@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
+gsettingsschemadir = @gsettingsschemadir@
 host = @host@
 host_alias = @host_alias@
 host_cpu = @host_cpu@
@@ -482,36 +491,17 @@ zshcompletiondir = @zshcompletiondir@
 DISTCLEANFILES = \
 	$(noinst_DATA)
 
-noinst_DATA = \
-	pulseaudio.1.xml \
-	esdcompat.1.xml \
-	pax11publish.1.xml \
-	pacat.1.xml \
-	pacmd.1.xml \
-	pactl.1.xml \
-	pasuspender.1.xml \
-	padsp.1.xml \
-	pulse-daemon.conf.5.xml \
-	pulse-client.conf.5.xml \
-	default.pa.5.xml \
-	pulse-cli-syntax.5.xml \
-	start-pulseaudio-x11.1.xml
-
-@BUILD_MANPAGES_TRUE@dist_man_MANS = \
-@BUILD_MANPAGES_TRUE@	pulseaudio.1 \
-@BUILD_MANPAGES_TRUE@	esdcompat.1 \
-@BUILD_MANPAGES_TRUE@	pax11publish.1 \
-@BUILD_MANPAGES_TRUE@	pacat.1 \
-@BUILD_MANPAGES_TRUE@	pacmd.1 \
-@BUILD_MANPAGES_TRUE@	pactl.1 \
-@BUILD_MANPAGES_TRUE@	pasuspender.1 \
-@BUILD_MANPAGES_TRUE@	padsp.1 \
-@BUILD_MANPAGES_TRUE@	pulse-daemon.conf.5 \
-@BUILD_MANPAGES_TRUE@	pulse-client.conf.5 \
-@BUILD_MANPAGES_TRUE@	default.pa.5 \
-@BUILD_MANPAGES_TRUE@	pulse-cli-syntax.5 \
-@BUILD_MANPAGES_TRUE@	start-pulseaudio-x11.1
-
+noinst_DATA = pulseaudio.1.xml pax11publish.1.xml pacat.1.xml \
+	pacmd.1.xml pactl.1.xml pasuspender.1.xml padsp.1.xml \
+	pulse-daemon.conf.5.xml pulse-client.conf.5.xml \
+	default.pa.5.xml pulse-cli-syntax.5.xml \
+	start-pulseaudio-x11.1.xml $(am__append_1)
+@BUILD_MANPAGES_TRUE@dist_man_MANS = pulseaudio.1 pax11publish.1 \
+@BUILD_MANPAGES_TRUE@	pacat.1 pacmd.1 pactl.1 pasuspender.1 \
+@BUILD_MANPAGES_TRUE@	padsp.1 pulse-daemon.conf.5 \
+@BUILD_MANPAGES_TRUE@	pulse-client.conf.5 default.pa.5 \
+@BUILD_MANPAGES_TRUE@	pulse-cli-syntax.5 start-pulseaudio-x11.1 \
+@BUILD_MANPAGES_TRUE@	$(am__append_2)
 @BUILD_MANPAGES_TRUE@CLEANFILES = \
 @BUILD_MANPAGES_TRUE@	$(dist_man_MANS)
 
@@ -570,8 +560,6 @@ $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 $(am__aclocal_m4_deps):
 pulseaudio.1.xml: $(top_builddir)/config.status $(srcdir)/pulseaudio.1.xml.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-esdcompat.1.xml: $(top_builddir)/config.status $(srcdir)/esdcompat.1.xml.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 pax11publish.1.xml: $(top_builddir)/config.status $(srcdir)/pax11publish.1.xml.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 pacat.1.xml: $(top_builddir)/config.status $(srcdir)/pacat.1.xml.in
@@ -593,6 +581,8 @@ default.pa.5.xml: $(top_builddir)/config.status $(srcdir)/default.pa.5.xml.in
 pulse-cli-syntax.5.xml: $(top_builddir)/config.status $(srcdir)/pulse-cli-syntax.5.xml.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 start-pulseaudio-x11.1.xml: $(top_builddir)/config.status $(srcdir)/start-pulseaudio-x11.1.xml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+esdcompat.1.xml: $(top_builddir)/config.status $(srcdir)/esdcompat.1.xml.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
 mostlyclean-libtool:

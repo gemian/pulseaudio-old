@@ -1,8 +1,28 @@
-pulseaudio (11.1+gemian) buster; urgency=medium
+pulseaudio (12.0+gemian) buster; urgency=medium
 
   * Branched for Gemian
 
- -- Adam Boardman <adamboardman@gmail.com>  Wed, 21 May 2018 10:12:48 +0100
+ -- Adam Boardman <adamboardman@gmail.com>  Wed, 29 Aug 2018 20:12:48 +0100
+
+pulseaudio (12.0-1) unstable; urgency=medium
+
+  * New upstream version 12.0
+  * Upload to unstable
+
+ -- Felipe Sateler <fsateler@debian.org>  Thu, 21 Jun 2018 11:26:59 -0400
+
+pulseaudio (11.99.1-1) experimental; urgency=medium
+
+  * New upstream version 11.99.1
+    - Drop all patches, applied upstream
+    - Licence of qpaeq changed from AGPL to LGPL
+  * Install new module always-source into pulseaudio package
+  * Build and install the gsettings module.
+    Disable the gconf module as it is superseded by gsettings
+    Closes: #757909
+  * Add new libpulse0 functions to the symbols file
+
+ -- Felipe Sateler <fsateler@debian.org>  Sun, 13 May 2018 12:35:13 -0400
 
 pulseaudio (11.1-5) unstable; urgency=medium
 

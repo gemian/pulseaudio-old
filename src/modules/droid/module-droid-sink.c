@@ -40,8 +40,6 @@
 #include "droid-util.h"
 #include "droid-sink.h"
 
-#include "module-droid-sink-symdef.h"
-
 PA_MODULE_AUTHOR("Juho Hämäläinen");
 PA_MODULE_DESCRIPTION("Droid sink");
 PA_MODULE_USAGE("master_sink=<sink to connect to> "

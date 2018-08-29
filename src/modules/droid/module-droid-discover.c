@@ -27,8 +27,6 @@
 
 #include <hybris/properties/properties.h>
 
-#include "module-droid-discover-symdef.h"
-
 PA_MODULE_AUTHOR("Simon Fels");
 PA_MODULE_DESCRIPTION("Detect on which Android version we're running and load correct implementation for it");
 PA_MODULE_VERSION(PACKAGE_VERSION);

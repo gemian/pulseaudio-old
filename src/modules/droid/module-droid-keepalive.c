@@ -45,8 +45,6 @@
 
 #include "keepalive.h"
 
-#include "module-droid-keepalive-symdef.h"
-
 PA_MODULE_AUTHOR("Juho Hämäläinen");
 PA_MODULE_DESCRIPTION("Droid keepalive. Send cpu wakeup heartbeat while streams are active.");
 PA_MODULE_VERSION(PACKAGE_VERSION);
