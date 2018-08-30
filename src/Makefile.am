@@ -2013,7 +2013,7 @@ module_droid_card_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS) -DPA_MODULE
 module_droid_glue_la_SOURCES = modules/droid/audioflingerglue-hybris.c modules/droid/module-droid-glue.c
 module_droid_glue_la_LDFLAGS = $(MODULE_LDFLAGS) -lm -lhybris-common
 module_droid_glue_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la
-module_droid_glue_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS) $(LIB_AF_CFLAGS) -I/usr/include/audioflingerglue
+module_droid_glue_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS) $(LIB_AF_CFLAGS) -I/usr/include/audioflingerglue  -DPA_MODULE_NAME=module_droid_glue
 endif # HAVE_ANDROID
 
 # Solaris
