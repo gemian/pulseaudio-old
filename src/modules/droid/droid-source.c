@@ -148,6 +148,8 @@ static int thread_read(struct userdata *u) {
     chunk.memblock = pa_memblock_new(u->core->mempool, (size_t) u->buffer_size);
 
     p = pa_memblock_acquire(chunk.memblock);
+    pa_log("pa_droid_stream_read u->stream %d, p %d, chunk.memblock %d",u->stream, p, chunk.memblock);
+    pa_log("pa_droid_stream_read u->stream->input->stream %d",u->stream->input->stream);
     readd = pa_droid_stream_read(u->stream, p, pa_memblock_get_length(chunk.memblock));
     pa_memblock_release(chunk.memblock);
 
