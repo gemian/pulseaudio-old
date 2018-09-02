@@ -263,6 +263,7 @@ Multi-Arch: same
 Depends: ${misc:Depends},
   pulseaudio (= ${binary:Version})
 Description: Pulsecore development headers
+ Headiers and libraries for use by plugins
 
 Package: libpulse-dev
 Section: libdevel
