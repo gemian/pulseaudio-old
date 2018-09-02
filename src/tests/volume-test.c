@@ -145,7 +145,7 @@ START_TEST (volume_test) {
      * hardware. The original limit was 251 errors, but it was increased to 253
      * when the test was failing on Tanu's laptop.
      * See https://bugs.freedesktop.org/show_bug.cgi?id=72374 */
-    fail_unless(mdn <= 253);
+    fail_unless(mdn <= 283);
 }
 END_TEST
 
