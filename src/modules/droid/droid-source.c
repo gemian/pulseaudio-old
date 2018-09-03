@@ -204,6 +204,10 @@ static void thread_func(void *userdata) {
         int ret;
 
         if (PA_SOURCE_IS_OPENED(u->source->thread_info.state)) {
+            if (!PA_SOURCE_IS_RUNNING(u->source->thread_info.state)) {
+                pa_droid_stream_suspend(u->stream, false);
+            }
+
             thread_read(u);
 
             pa_rtpoll_set_timer_absolute(u->rtpoll, u->timestamp);
