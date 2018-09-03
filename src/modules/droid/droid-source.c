@@ -204,7 +204,7 @@ static void thread_func(void *userdata) {
         int ret;
 
         if (PA_SOURCE_IS_OPENED(u->source->thread_info.state)) {
-            if (!PA_SOURCE_IS_RUNNING(u->source->thread_info.state)) {
+            if (!u->source->input->stream) {
                 pa_droid_stream_suspend(u->stream, false);
             }
 
