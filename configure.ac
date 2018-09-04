@@ -949,9 +949,9 @@ AC_ARG_WITH([audioflingerglue-name],
         )
 LIB_AF_CFLAGS="-DLIB_AF_NAME=\"\\\"${afname}\\\"\" -DPA_MODULE_NAME=audioflingerglue"
 
-audioflingergluebase="/usr/libexec/droid-hybris/system"
+audioflingergluebase="/system"
 AC_ARG_WITH([audioflingerglue-base],
-        AS_HELP_STRING([--with-audioflingerglue-base], [Audioflingerglue library base path (default /usr/libexec/droid-hybris/system)]),
+        AS_HELP_STRING([--with-audioflingerglue-base], [Audioflingerglue library base path (default /system)]),
         [afpath=$withval], [afpath=$audioflingergluebase]
         )
 LIB_AF_CFLAGS+=" -DLIB_AF_BASE_PATH=\"\\\"${afpath}\\\"\""
