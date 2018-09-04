@@ -117,16 +117,7 @@ load-module module-systemd-login
 load-module module-dbus-protocol
 .endif
 
-### Cork music/video streams when a phone stream is active
-load-module module-role-cork
-
-### Modules to allow autoloading of filters (such as echo cancellation)
-### on demand. module-filter-heuristics tries to determine what filters
-### make sense, and module-filter-apply does the heavy-lifting of
-### loading modules and rerouting streams.
-load-module module-filter-heuristics
-load-module module-filter-apply
-
-### Make some devices default
-#set-default-sink output
-#set-default-source input
+### Move orphan streams to placeholder sinks or sources so that playback doesn't get
+### interrupted. Policy enforcement module then moves the streams to new appropriate
+### sinks or sources.
+#load-module module-rescue-streams sink_name=sink.null source_name=sink.null.monitor
