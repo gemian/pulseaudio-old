@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <hybris/common/binding.h>
 
-HYBRIS_LIBRARY_INITIALIZE(audioflingerglue, "libaudioflingerglue.so");
+HYBRIS_LIBRARY_INITIALIZE(audioflingerglue, "/system/lib64/libaudioflingerglue.so");
 
 HYBRIS_IMPLEMENT_FUNCTION2(audioflingerglue, DroidAfGlue*, droid_afglue_connect, DroidAfGlueCallbacks*, void*);
 HYBRIS_IMPLEMENT_VOID_FUNCTION1(audioflingerglue, droid_afglue_disconnect, DroidAfGlue*);
