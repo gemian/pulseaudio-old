@@ -201,7 +201,7 @@ static void thread_func(void *userdata) {
     for (;;) {
         int ret;
 
-        if (PA_SOURCE_IS_RUNNING(u->source->thread_info.state)) {
+        if (PA_SOURCE_IS_RUNNING(u->source->thread_info.state) && u->stream->input->stream) {
 
             thread_read(u);
 
