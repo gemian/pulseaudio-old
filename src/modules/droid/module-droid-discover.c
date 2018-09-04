@@ -65,7 +65,7 @@ int pa__init(pa_module* m) {
         return -1;
     }
 
-    mm = pa_module_load(m->core, module_name, m->argument);
+    pa_module_load(&mm, m->core, module_name, m->argument);
     if (mm)
         u->module_idx = mm->index;
 
