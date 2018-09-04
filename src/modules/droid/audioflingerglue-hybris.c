@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <hybris/common/binding.h>
 
+//This path appears to be ignored
 HYBRIS_LIBRARY_INITIALIZE(audioflingerglue, "/system/lib64/libaudioflingerglue.so");
 
 HYBRIS_IMPLEMENT_FUNCTION2(audioflingerglue, DroidAfGlue*, droid_afglue_connect, DroidAfGlueCallbacks*, void*);
