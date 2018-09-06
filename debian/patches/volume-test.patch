@@ -1,0 +1,19 @@
+Description: Increase the acceptable rounding error threshold for volume-test.c
+Bug: https://gitlab.freedesktop.org/pulseaudio/pulseaudio/issues/559
+Origin: upstream, https://gitlab.freedesktop.org/pulseaudio/pulseaudio/merge_requests/4
+Bug-Debian: https://bugs.debian.org/906504
+Last-update: 2018-09-05
+Reviewed-by: Joseph Herlant <herlantj@gmail.com>
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/src/tests/volume-test.c
++++ b/src/tests/volume-test.c
+@@ -145,7 +145,7 @@
+      * hardware. The original limit was 251 errors, but it was increased to 253
+      * when the test was failing on Tanu's laptop.
+      * See https://bugs.freedesktop.org/show_bug.cgi?id=72374 */
+-    fail_unless(mdn <= 253);
++    fail_unless(mdn <= 300);
+ }
+ END_TEST
+ 
