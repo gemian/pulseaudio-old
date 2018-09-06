@@ -1,8 +1,15 @@
-pulseaudio (12.2-1) UNRELEASED; urgency=medium
+pulseaudio (12.2-1) unstable; urgency=medium
 
+  [ Felipe Sateler ]
   * New upstream version 12.2
+  * Do not build esound compatibility anymore.
+    Esound will not be part of buster, so no need to have the compat code built.
+    (Closes: #561780)
 
- -- Felipe Sateler <fsateler@debian.org>  Tue, 07 Aug 2018 19:17:54 -0400
+  [ Joseph Herlant ]
+  * Add patch to allow a higher deviation for volume-test.c (Closes: #906504)
+
+ -- Felipe Sateler <fsateler@debian.org>  Thu, 06 Sep 2018 10:46:33 -0300
 
 pulseaudio (12.0-1) unstable; urgency=medium
 
