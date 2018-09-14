@@ -1669,4 +1669,3 @@ pulseaudio (0.9.5-1) unstable; urgency=low
   * Initial release (Closes: #378626)
 
  -- CJ van den Berg <cj@vdbonline.com>  Mon, 28 Aug 2006 00:31:10 +0200
-

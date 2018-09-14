@@ -250,4 +250,3 @@ Description: PulseAudio OSS pre-load library
  .
  This package provides the pre-load library used to redirect applications
  using OSS through pulseaudio.
-
