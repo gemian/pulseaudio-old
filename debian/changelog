@@ -1,3 +1,16 @@
+pulseaudio (12.2-2) unstable; urgency=medium
+
+  [ Joseph Herlant ]
+  * Allow rounding without having to allow a random number of errors in
+    tests/volume-test.c (Closes: #906504)
+
+  [ Felipe Sateler ]
+  * Bump debhelper compat level to 11.
+    Also switch to the new debhelper-compat virtual package
+  * Bump Standards-Version
+
+ -- Felipe Sateler <fsateler@debian.org>  Fri, 14 Sep 2018 20:16:14 -0300
+
 pulseaudio (12.2-1) unstable; urgency=medium
 
   [ Felipe Sateler ]
