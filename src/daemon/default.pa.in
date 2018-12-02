@@ -19,72 +19,59 @@
 # (i.e. not in system mode)
 changequote(`[', `]')dnl Set up m4 quoting
 
+.nofail
+
 .fail
 
-### Automatically restore the volume of streams and devices
-load-module module-device-restore
-load-module module-stream-restore
-load-module module-card-restore
+load-module module-droid-keepalive
+
+#load-module module-meego-parameters cache=1 directory=/var/lib/nemo-pulseaudio-parameters use_voice=false
+#load-module module-meego-mainvolume virtual_stream=true
+
+### Automatically restore the volume of streams
+# load configuration based on bluez version
+#.ifexists /etc/pulse/bluez5_stream_restore.pa
+# .include /etc/pulse/bluez5_stream_restore.pa
+#.else
+# .include /etc/pulse/bluez4_stream_restore.pa
+#.endif
+
+#load-module module-match table=/etc/pulse/x-maemo-match.table key=application.name
 
 ### Automatically augment property information from .desktop files
 ### stored in /usr/share/application
 load-module module-augment-properties
 
-### Should be after module-*-restore but before module-*-detect
+load-module module-null-sink sink_name=sink.null rate=48000
+
+### Switch when connected by default (ubports)
+load-module module-switch-on-connect skip_abstract=yes
+### Should be after module-*-restore but before module-*-detect (sfos)
 load-module module-switch-on-port-available
 
-### Load audio drivers statically
-### (it's probably better to not load these drivers manually, but instead
-### use module-udev-detect -- see below -- for doing this automatically)
-ifelse(@HAVE_ALSA@, 1, [dnl
-#load-module module-alsa-sink
-#load-module module-alsa-source device=hw:1,0
-])dnl
-ifelse(@HAVE_OSS_OUTPUT@, 1, [dnl
-#load-module module-oss device="/dev/dsp" sink_name=output source_name=input
-#load-module module-oss-mmap device="/dev/dsp" sink_name=output source_name=input
-])dnl
-ifelse(@HAVE_WAVEOUT@, 1, [dnl
-load-module module-waveout sink_name=output source_name=input
-])dnl
-#load-module module-null-sink
-ifelse(@HAVE_MKFIFO@, 1, [dnl
-#load-module module-pipe-sink
-])dnl
 
-### Automatically load driver modules depending on the hardware available
-ifelse(@HAVE_UDEV@, 1, [dnl
-.ifexists module-udev-detect@PA_SOEXT@
-load-module module-udev-detect
+### If droid-card needs other arguments than the default, have the new
+### load-module line in /etc/pulse/arm_droid_card_custom.pa
+.ifexists /etc/pulse/arm_droid_card_custom.pa
+ .include /etc/pulse/arm_droid_card_custom.pa
 .else
-], @HAVE_COREAUDIO@, 1, [dnl
-.ifexists module-coreaudio-detect@PA_SOEXT@
-load-module module-coreaudio-detect
-.else
-], [dnl
-.ifexists module-detect@PA_SOEXT@
-])dnl
-### Use the static hardware detection module (for systems that lack udev support)
-load-module module-detect
+ load-module module-droid-card rate=48000
 .endif
 
-### Automatically connect sink and source if JACK server is present
-.ifexists module-jackdbus-detect@PA_SOEXT@
-.nofail
-load-module module-jackdbus-detect channels=2
-.fail
+### Needed on many new devices. HADK guide explains how to implement this fully
+.ifexists module-droid-glue@PA_SOEXT@
+ .nofail
+ load-module module-droid-glue
+ .fail
 .endif
 
-ifelse(@HAVE_BLUEZ@, 1, [dnl
-### Automatically load driver modules for Bluetooth hardware
-.ifexists module-bluetooth-policy@PA_SOEXT@
-load-module module-bluetooth-policy
-.endif
+load-module module-null-sink sink_name=sink.fake.sco rate=8000 channels=1
+load-module module-null-source source_name=source.fake.sco rate=8000 channels=1
+#load-module module-bluetooth-discover bluez4_args="sco_sink=sink.fake.sco sco_source=source.fake.sco" bluez5_args="headset=droid"
 
-.ifexists module-bluetooth-discover@PA_SOEXT@
-load-module module-bluetooth-discover
-.endif
-])dnl
+#load-module module-policy-enforcement
+
+load-module module-role-ducking trigger_roles=alarm,notification,warning ducking_roles=x-maemo volume=-200dB
 
 ifelse(@HAVE_AF_UNIX@, 1, [dnl
 ### Load several protocols
@@ -102,7 +89,6 @@ ifelse(@HAVE_AVAHI@, 1, [dnl
 #load-module module-zeroconf-publish
 ])dnl
 
-ifelse(@OS_IS_WIN32@, 0, [dnl
 ### Load the RTP receiver module (also configured via paprefs, see above)
 #load-module module-rtp-recv
 
@@ -119,16 +105,6 @@ load-module module-gconf
 .fail
 .endif
 
-### Automatically restore the default sink/source when changed by the user
-### during runtime
-### NOTE: This should be loaded as early as possible so that subsequent modules
-### that look up the default sink/source get the right value
-load-module module-default-device-restore
-
-### Automatically move streams to the default sink if the sink they are
-### connected to dies, similar for sources
-load-module module-rescue-streams
-
 ### Make sure we always have a sink around, even if it is a null sink.
 load-module module-always-sink
 
@@ -136,7 +112,7 @@ load-module module-always-sink
 load-module module-intended-roles
 
 ### Automatically suspend sinks/sources that become idle for too long
-load-module module-suspend-on-idle
+load-module module-suspend-on-idle timeout=1
 
 ### If autoexit on idle is enabled we want to make sure we only quit
 ### when no local session needs us anymore.
@@ -147,20 +123,12 @@ load-module module-console-kit
 load-module module-systemd-login
 .endif
 
-### Enable positioned event sounds
-load-module module-position-event-sounds
+### Load DBus protocol
+.ifexists module-dbus-protocol@PA_SOEXT@
+load-module module-dbus-protocol
+.endif
 
-### Cork music/video streams when a phone stream is active
-load-module module-role-cork
-
-### Modules to allow autoloading of filters (such as echo cancellation)
-### on demand. module-filter-heuristics tries to determine what filters
-### make sense, and module-filter-apply does the heavy-lifting of
-### loading modules and rerouting streams.
-load-module module-filter-heuristics
-load-module module-filter-apply
-])dnl
-
-### Make some devices default
-#set-default-sink output
-#set-default-source input
+### Move orphan streams to placeholder sinks or sources so that playback doesn't get
+### interrupted. Policy enforcement module then moves the streams to new appropriate
+### sinks or sources.
+#load-module module-rescue-streams sink_name=sink.null source_name=sink.null.monitor
