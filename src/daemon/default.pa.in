@@ -32,6 +32,13 @@ load-module module-augment-properties
 
 load-module module-null-sink sink_name=sink.null rate=48000
 
+
+### Switch when connected by default (ubports)
+load-module module-switch-on-connect skip_abstract=yes
+### Should be after module-*-restore but before module-*-detect (sfos)
+load-module module-switch-on-port-available
+
+
 ### If droid-card needs other arguments than the default, have the new
 ### load-module line in /etc/pulse/arm_droid_card_custom.pa
 .ifexists /etc/pulse/arm_droid_card_custom.pa
@@ -41,7 +48,7 @@ load-module module-null-sink sink_name=sink.null rate=48000
 .endif
 
 ### Needed on many new devices. HADK guide explains how to implement this fully
-.ifexists module-droid-glue.so
+.ifexists module-droid-glue@PA_SOEXT@
  .nofail
  load-module module-droid-glue
  .fail
@@ -55,16 +62,22 @@ load-module module-null-source source_name=source.fake.sco rate=8000 channels=1
 
 load-module module-role-ducking trigger_roles=alarm,notification,warning ducking_roles=x-maemo volume=-200dB
 
+ifelse(@HAVE_AF_UNIX@, 1, [dnl
 ### Load several protocols
 .ifexists module-esound-protocol-unix@PA_SOEXT@
 load-module module-esound-protocol-unix
 .endif
 load-module module-native-protocol-unix
+])dnl
 
 ### Network access (may be configured with paprefs, so leave this commented
 ### here if you plan to use paprefs)
 #load-module module-esound-protocol-tcp
 #load-module module-native-protocol-tcp
+ifelse(@HAVE_AVAHI@, 1, [dnl
+#load-module module-zeroconf-publish
+])dnl
+
 ### Load the RTP receiver module (also configured via paprefs, see above)
 #load-module module-rtp-recv
 

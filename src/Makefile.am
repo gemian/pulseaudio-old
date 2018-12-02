@@ -2010,6 +2010,12 @@ module_droid_card_la_LDFLAGS = $(MODULE_LDFLAGS)
 module_droid_card_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la libdroid-sink.la libdroid-source.la
 module_droid_card_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS) -DPA_MODULE_NAME=module_droid_card
 
+if HAVE_UDEV
+module_droid_card_la_SOURCES += modules/droid/droid-extcon.c
+module_droid_card_la_LIBADD += $(UDEV_LIBS)
+module_droid_card_la_CFLAGS += $(UDEV_CFLAGS)
+endif
+
 module_droid_glue_la_SOURCES = modules/droid/audioflingerglue-hybris.c modules/droid/module-droid-glue.c
 module_droid_glue_la_LDFLAGS = $(MODULE_LDFLAGS) -lm -lhybris-common
 module_droid_glue_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la
