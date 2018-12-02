@@ -34,7 +34,7 @@ load-module module-null-sink sink_name=sink.null rate=48000
 
 
 ### Switch when connected by default (ubports)
-load-module module-switch-on-connect skip_abstract=yes
+load-module module-switch-on-connect ignore_virtual=yes
 ### Should be after module-*-restore but before module-*-detect (sfos)
 load-module module-switch-on-port-available
 
