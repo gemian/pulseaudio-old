@@ -1,3 +1,9 @@
+pulseaudio (10.0+gemian2) stretch; urgency=medium
+
+  * Added extcon for headset detection
+
+ -- Adam Boardman <adamboardman@gmail.com>  Sun, 2 Dec 2018 21:58:48 +0000
+
 pulseaudio (10.0+gemian1) stretch; urgency=medium
 
   * Branched for Gemian
