@@ -1,3 +1,19 @@
+pulseaudio (12.2-3) unstable; urgency=medium
+
+  [ Joseph Herlant ]
+  * d/changelog & d/control: Remove trailing whitespaces
+
+  [ Felipe Sateler ]
+  * Backport upstream patches for better Arctis headset support
+    (Closes: #918067)
+  * Ship link from /etc/alsa/conf.d/pulse.conf to /usr/share/alsa/alsa.conf.d/pulse.conf.
+    Upstream alsa decided to stop supporting the /usr path (Closes: #915696)
+  * Don't compile with -ffast-math.
+    This flag results in calls to (at least) isfinite() and isnan() becoming
+    skipped, and a constant false returned. (Closes: #916504)
+
+ -- Felipe Sateler <fsateler@debian.org>  Tue, 15 Jan 2019 21:58:48 -0300
+
 pulseaudio (12.2-2) unstable; urgency=medium
 
   [ Joseph Herlant ]
