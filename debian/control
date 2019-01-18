@@ -43,6 +43,7 @@ Build-Depends: debhelper (>= 9.20141010),
     libxtst-dev,
     android-headers,
     libubuntu-application-api-headers,
+    libubuntu-application-api3,
     libhybris-dev
 Standards-Version: 3.9.8
 Vcs-Git: https://anonscm.debian.org/git/pkg-pulseaudio/pulseaudio.git
