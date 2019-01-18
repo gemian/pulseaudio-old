@@ -1,11 +1,10 @@
-#ifndef foodroidextconhfoo
-#define foodroidextconhfoo
+#ifndef _DROID_COVER_UI_
+#define _DROID_COVER_UI_
 
 /***
   This file is part of PulseAudio.
 
-  Copyright (C) 2013 Canonical Ltd.
-  Contact: David Henningsson
+  Copyright (C) 2019 Adam Boardman
 
   PulseAudio is free software; you can redistribute it and/or modify
   it under the terms of the GNU Lesser General Public License as published
@@ -23,14 +22,20 @@
   USA.
 ***/
 
-typedef struct pa_droid_extcon pa_droid_extcon;
+typedef struct pa_droid_cover_ui pa_droid_cover_ui;
+typedef enum {
+    CoverUiOff,
+    CoverUiSeeking,
+    CoverUiSeekingLeftUp,
+    CoverUiSeekingRightUp,
+    CoverUiFixedLeftUp,
+    CoverUiFixedRightUp
+} pa_droid_cover_ui_state;
 
-typedef void (*extcon_update_callback)(void *userdata, uint32_t value);
+pa_droid_cover_ui *pa_droid_cover_ui_new(pa_core *core);
 
-void pa_droid_extcon_set_cb(pa_droid_extcon *extcon_data, extcon_update_callback cb, void *data);
+void pa_droid_cover_ui_set_state(pa_droid_cover_ui *u, pa_droid_cover_ui_state state);
 
-pa_droid_extcon *pa_droid_extcon_new(pa_core *, pa_card *);
+void pa_droid_cover_ui_free(pa_droid_cover_ui *);
 
-void pa_droid_extcon_free(pa_droid_extcon *);
-
-#endif
+#endif //_DROID_COVER_UI_

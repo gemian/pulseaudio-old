@@ -44,11 +44,10 @@ load-module module-augment-properties
 
 load-module module-null-sink sink_name=sink.null rate=48000
 
-### Switch when connected by default (ubports)
+### Switch when connected by default
 load-module module-switch-on-connect skip_abstract=yes
-### Should be after module-*-restore but before module-*-detect (sfos)
+### Should be after module-*-restore but before module-*-detect
 load-module module-switch-on-port-available
-
 
 ### If droid-card needs other arguments than the default, have the new
 ### load-module line in /etc/pulse/arm_droid_card_custom.pa
@@ -132,3 +131,13 @@ load-module module-dbus-protocol
 ### interrupted. Policy enforcement module then moves the streams to new appropriate
 ### sinks or sources.
 #load-module module-rescue-streams sink_name=sink.null source_name=sink.null.monitor
+
+### Enable positioned event sounds
+load-module module-position-event-sounds
+
+### Modules to allow auto-loading of filters (such as echo cancellation)
+### on demand. module-filter-heuristics tries to determine what filters
+### make sense, and module-filter-apply does the heavy-lifting of
+### loading modules and rerouting streams.
+load-module module-filter-heuristics
+load-module module-filter-apply

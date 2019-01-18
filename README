@@ -37,7 +37,14 @@ HACKING:
 	  ./autogen.sh
 	  CFLAGS="-ggdb3 -O0" LDFLAGS="-ggdb3" ./configure
 	  make
-	  ./src/pulseaudio -n -F src/default.pa -p $(pwd)/src/
+	  ./src/pulseaudio -n -F src/default.pa -p $(pwd)/src/ -vvvv
+
+	Need to disable autospawn
+	  echo autospawn = no >> ~/.config/pulse/client.conf
+
+	Debug
+	  gdb src/.libs/lt-pulseaudio
+	  run -n -F /home/adam/source/pulseaudio/src/default.pa -p /home/adam/source/pulseaudio/src/ -vvvv
 
 SPELLING:
         PulseAudio

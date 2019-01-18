@@ -2279,7 +2279,7 @@ pa_droid_stream *pa_droid_open_output_stream(pa_droid_hw_module *module,
 
     s->buffer_size = output->stream->common.get_buffer_size(&output->stream->common);
 
-    pa_log_info("Opened droid output stream %p with device: %u flags: %u sample rate: %u channels: %u (%u) format: %u (%u) buffer size: %u (%llu usec)",
+    pa_log_info("Opened droid output stream %p with device: %u flags: %u sample rate: %u channels: %u (%u) format: %u (%u) buffer size: %lu (%lu usec)",
             (void *) s,
             devices,
             output->flags,
@@ -2370,7 +2370,7 @@ static int input_stream_open(pa_droid_stream *s) {
     input_stream_set_route(s, input->device);
 
     if (buffer_size_changed) {
-        pa_log_debug("Input stream %p buffer size changed to %u.", (void *) s, s->buffer_size);
+        pa_log_debug("Input stream %p buffer size changed to %lu.", (void *) s, s->buffer_size);
         pa_hook_fire(&s->module->hooks[PA_DROID_HOOK_INPUT_BUFFER_SIZE_CHANGED], (void *) s);
     }
 
@@ -2437,7 +2437,7 @@ pa_droid_stream *pa_droid_open_input_stream(pa_droid_hw_module *module,
 
     pa_idxset_put(module->inputs, s, NULL);
 
-    pa_log_info("Opened droid input stream %p with device: %u flags: %u sample rate: %u channels: %u format: %u buffer size: %u (%llu usec)",
+    pa_log_info("Opened droid input stream %p with device: %u flags: %u sample rate: %u channels: %u format: %u buffer size: %lu (%lu usec)",
             (void *) s,
             devices,
             input->flags,
@@ -2583,6 +2583,8 @@ static int input_stream_set_route(pa_droid_stream *s, audio_devices_t device) {
     char *parameters;
     int ret = 0;
 
+    pa_log_debug("input_stream_set_route %p, %u", (void *) s, device);
+
     pa_assert(s);
     pa_assert(s->input);
     pa_assert(s->input->stream);
@@ -2632,6 +2634,8 @@ static int input_stream_set_route(pa_droid_stream *s, audio_devices_t device) {
 
 static int droid_input_stream_set_route(pa_droid_stream *s, audio_devices_t device) {
     int ret = 0;
+
+    pa_log_debug("droid_input_stream_set_route %p, %u", (void *) s, device);
 
     pa_assert(s);
     pa_assert(s->input);

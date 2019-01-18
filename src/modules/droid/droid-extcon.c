@@ -101,14 +101,19 @@ struct udev_data {
 struct pa_droid_extcon {
     pa_card *card;
     struct droid_switch *h2w;
+    struct droid_switch *hall;
     struct udev_data udev;
+    void *updateCallbackData;
+    extcon_update_callback updateCallback;
 };
 
 static struct droid_switch *find_matching_switch(pa_droid_extcon *u,
                                                    const char *devpath) {
 
     if (pa_streq(devpath, "/devices/virtual/" EXTCON_NAME "/h2w"))
-        return u->h2w;  /* To be extended if we ever support more switches */
+        return u->h2w;
+    if (pa_streq(devpath, "/devices/virtual/" EXTCON_NAME "/hall"))
+        return u->hall;
     return NULL;
 }
 
@@ -117,21 +122,26 @@ static void notify_ports(pa_droid_extcon *u, struct droid_switch *as) {
     pa_device_port *p;
     void *state;
 
-    pa_assert(as == u->h2w); /* To be extended if we ever support more switches */
+    pa_assert(as == u->h2w || as == u->hall); /* To be extended if we ever support more switches */
 
     pa_log_debug("Value of switch %s is now %d.", as->name, as->current_value);
 
-    PA_HASHMAP_FOREACH(p, u->card->ports, state) {
-        if (p->direction == PA_DIRECTION_OUTPUT) {
-            if (!strcmp(p->name, "output-wired_headset"))
-                pa_device_port_set_available(p, hsmic_avail(as->current_value));
-            if (!strcmp(p->name, "output-wired_headphone"))
-                pa_device_port_set_available(p, hponly_avail(as->current_value));
+    if (as == u->h2w) {
+        PA_HASHMAP_FOREACH(p, u->card->ports, state)
+        {
+            if (p->direction == PA_DIRECTION_OUTPUT) {
+                if (!strcmp(p->name, "output-wired_headset"))
+                    pa_device_port_set_available(p, hsmic_avail(as->current_value));
+                if (!strcmp(p->name, "output-wired_headphone"))
+                    pa_device_port_set_available(p, hponly_avail(as->current_value));
+            }
+            if (p->direction == PA_DIRECTION_INPUT) {
+                if (!strcmp(p->name, "input-wired_headset"))
+                    pa_device_port_set_available(p, hsmic_avail(as->current_value));
+            }
         }
-        if (p->direction == PA_DIRECTION_INPUT) {
-            if (!strcmp(p->name, "input-wired_headset"))
-                pa_device_port_set_available(p, hsmic_avail(as->current_value));
-        }
+    } else if (as == u->hall && u->updateCallbackData != NULL) {
+        u->updateCallback(u->updateCallbackData, as->current_value);
     }
 }
 
@@ -225,6 +235,11 @@ static bool init_udev(pa_droid_extcon *u, pa_core *core) {
     return true;
 }
 
+void pa_droid_extcon_set_cb(pa_droid_extcon *extcon_data, extcon_update_callback cb, void *data) {
+    extcon_data->updateCallback = cb;
+    extcon_data->updateCallbackData = data;
+}
+
 pa_droid_extcon *pa_droid_extcon_new(pa_core *core, pa_card *card) {
 
     pa_droid_extcon *u = pa_xnew0(pa_droid_extcon, 1);
@@ -237,10 +252,17 @@ pa_droid_extcon *pa_droid_extcon_new(pa_core *core, pa_card *card) {
     if (!u->h2w)
         goto fail;
 
+    u->hall = droid_switch_new("hall");
+    if (!u->hall)
+        goto fail;
+
     if (!init_udev(u, core))
         goto fail;
 
+    u->updateCallbackData = NULL;
+
     notify_ports(u, u->h2w);
+    notify_ports(u, u->hall);
 
     return u;
 
@@ -264,6 +286,9 @@ void pa_droid_extcon_free(pa_droid_extcon *u) {
 
     if (u->h2w)
         droid_switch_free(u->h2w);
+
+    if (u->hall)
+        droid_switch_free(u->hall);
 
     pa_xfree(u);
 }

@@ -100,6 +100,8 @@ static int do_routing(struct userdata *u, audio_devices_t devices) {
     pa_assert(u);
     pa_assert(u->stream);
 
+    pa_log_debug("do_routing %u, %u", u->primary_devices, devices);
+
     if (u->primary_devices == devices)
         pa_log_debug("Refresh active device routing.");
 
@@ -346,7 +348,10 @@ static void source_set_name(pa_modargs *ma, pa_source_new_data *data, const char
     pa_assert(ma);
     pa_assert(data);
 
+    pa_log_debug("source_set_name %s", data->name);
+
     if ((tmp = pa_modargs_get_value(ma, "source_name", NULL))) {
+        pa_log_debug("source_set_name args source_name %s", tmp);
         pa_source_new_data_set_name(data, tmp);
         data->namereg_fail = true;
         pa_proplist_sets(data->proplist, PA_PROP_DEVICE_DESCRIPTION, "Droid source");
@@ -359,6 +364,7 @@ static void source_set_name(pa_modargs *ma, pa_source_new_data *data, const char
         data->namereg_fail = false;
         pa_proplist_setf(data->proplist, PA_PROP_DEVICE_DESCRIPTION, "Droid source %s", module_id);
     }
+    pa_log_debug("source_set_name %s", data->name);
 }
 
 #if (PULSEAUDIO_VERSION == 5)
