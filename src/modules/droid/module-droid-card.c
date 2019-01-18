@@ -539,7 +539,7 @@ static bool voicecall_earpiece_right_up_profile_event_cb(struct userdata *u, pa_
 }
 
 static void update_audio_routing(struct userdata *u) {
-    pa_log_debug("active profile: %s",u->card->active_profile->name);
+    pa_log_debug("active profile: %s",u->card->active_profile?u->card->active_profile->name:"NULL");
     pa_log_debug("preferred_input_port: %s",u->card->preferred_input_port?u->card->preferred_input_port->name:"NULL");
     pa_log_debug("preferred_output_port: %s",u->card->preferred_output_port?u->card->preferred_output_port->name:"NULL");
 
@@ -548,7 +548,6 @@ static void update_audio_routing(struct userdata *u) {
                     strcmp(u->card->active_profile->name, VOICE_EARPIECE_LEFT_UP_PROFILE_NAME) == 0 ||
                     strcmp(u->card->active_profile->name, VOICE_EARPIECE_RIGHT_UP_PROFILE_NAME) == 0
             ) ) {
-        pa_log_debug(u->card->active_profile->name);
         if (u->accel->o != OrientationUnknown) {
             pa_log_debug("orientation %d",u->accel->o);
             if (u->accel->o == OrientationLeftUp) {
@@ -591,7 +590,6 @@ static void extcon_update_state(void *userdata, uint32_t value) {
 
     PA_IDXSET_FOREACH(sink, u->core->sinks, set_index) {
         pa_log_debug("sink: %s",sink->name);
-        pa_log_debug("sink active port: %d",sink->active_port);
         if (sink->active_port && strcmp(sink->active_port->name, "output-earpiece") == 0 && value == 1) {
             pa_sink_set_port(sink, "output-speaker", false);
         }
