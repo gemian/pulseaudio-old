@@ -144,8 +144,8 @@ static const char* const valid_modargs[] = {
 #define VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_NAME   "voicecall-record-rightup"
 #define VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_DESC   "Call mode record"
 
-//#define ORIENTATION_FIX_TIME 10
-#define ORIENTATION_FIX_TIME 50
+#define ORIENTATION_FIX_TIME 10
+//#define ORIENTATION_FIX_TIME 50
 
 struct userdata;
 
