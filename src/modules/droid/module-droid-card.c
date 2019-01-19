@@ -151,6 +151,7 @@ struct userdata;
 
 typedef bool (*virtual_profile_event_cb)(struct userdata *u, pa_droid_profile *p, bool enabling);
 
+static bool voicecall_earpiece_x_up_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling, calls_orientation orientation, const char*name);
 static bool voicecall_earpiece_left_up_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling);
 static bool voicecall_earpiece_right_up_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling);
 static void update_audio_routing(struct userdata *u);
@@ -449,95 +450,6 @@ static void set_mic_switch(struct userdata *u, pa_droid_profile *p, bool mic_swi
     pa_xfree(setparam);
 }
 
-static bool voicecall_earpiece_left_up_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling)
-{
-    pa_card_profile *cp = NULL;
-    pa_droid_mapping *am_output;
-
-    pa_log_debug("voicecall_earpiece_left_up_profile_event_cb %d", enabling);
-
-    pa_assert(u);
-    pa_assert(p);
-    pa_assert(u->old_profile);
-
-    u->voice_call_leftup_active = enabling;
-    set_mic_switch(u, p, 1);
-
-    if (!(am_output = pa_droid_idxset_get_primary(u->old_profile->output_mappings))) {
-        pa_log("Active profile doesn't have primary output device.");
-        return false;
-    }
-
-    if (pa_droid_idxset_mapping_with_device(u->old_profile->input_mappings, AUDIO_DEVICE_IN_VOICE_CALL)) {
-        cp = pa_hashmap_get(u->card->profiles, VOICE_EARPIECE_LEFT_UP_RECORD_PROFILE_NAME);
-    }
-
-    if (enabling) {
-        pa_droid_sink_set_voice_control(am_output->sink, true);
-        if (cp && cp->available == PA_AVAILABLE_NO) {
-            pa_log_debug("Enable " VOICE_EARPIECE_LEFT_UP_RECORD_PROFILE_NAME " profile.");
-            pa_card_profile_set_available(cp, PA_AVAILABLE_YES);
-        }
-    } else {
-        pa_droid_sink_set_voice_control(am_output->sink, false);
-        if (cp && cp->available == PA_AVAILABLE_YES) {
-            pa_log_debug("Disable " VOICE_EARPIECE_LEFT_UP_RECORD_PROFILE_NAME " profile.");
-            pa_card_profile_set_available(cp, PA_AVAILABLE_NO);
-        }
-    }
-    if (enabling) {
-        update_audio_routing(u);
-    }
-    update_cover_ui(u);
-
-    return true;
-}
-
-static bool voicecall_earpiece_right_up_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling)
-{
-    pa_card_profile *cp = NULL;
-    pa_droid_mapping *am_output;
-
-    pa_log_debug("voicecall_earpiece_right_up_profile_event_cb %d", enabling);
-
-    pa_assert(u);
-    pa_assert(p);
-    pa_assert(u->old_profile);
-
-    u->voice_call_rightup_active = enabling;
-    set_mic_switch(u, p, 0);
-
-    if (!(am_output = pa_droid_idxset_get_primary(u->old_profile->output_mappings))) {
-        pa_log("Active profile doesn't have primary output device.");
-        return false;
-    }
-
-    if (pa_droid_idxset_mapping_with_device(u->old_profile->input_mappings, AUDIO_DEVICE_IN_VOICE_CALL)) {
-        cp = pa_hashmap_get(u->card->profiles, VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_NAME);
-    }
-
-    if (enabling) {
-        pa_droid_sink_set_voice_control(am_output->sink, true);
-        if (cp && cp->available == PA_AVAILABLE_NO) {
-            pa_log_debug("Enable " VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_NAME " profile.");
-            pa_card_profile_set_available(cp, PA_AVAILABLE_YES);
-        }
-    } else {
-        pa_droid_sink_set_voice_control(am_output->sink, false);
-        if (cp && cp->available == PA_AVAILABLE_YES) {
-            pa_log_debug("Disable " VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_NAME " profile.");
-            pa_card_profile_set_available(cp, PA_AVAILABLE_NO);
-        }
-    }
-
-    if (enabling) {
-        update_audio_routing(u);
-    }
-    update_cover_ui(u);
-
-    return true;
-}
-
 static void update_audio_routing(struct userdata *u) {
     pa_log_debug("active profile: %s",u->card->active_profile?u->card->active_profile->name:"NULL");
     pa_log_debug("preferred_input_port: %s",u->card->preferred_input_port?u->card->preferred_input_port->name:"NULL");
@@ -677,9 +589,8 @@ static void park_profile(pa_droid_profile *dp) {
     };
 }
 
-static bool voicecall_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling) {
-    pa_log_debug("voicecall_profile_event_cb %d", enabling);
-
+static bool voicecall_earpiece_x_up_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling, calls_orientation orientation, const char*name)
+{
     pa_card_profile *cp = NULL;
     pa_droid_mapping *am_output;
 
@@ -687,28 +598,39 @@ static bool voicecall_profile_event_cb(struct userdata *u, pa_droid_profile *p, 
     pa_assert(p);
     pa_assert(u->old_profile);
 
-    u->voice_call_active = enabling;
+    switch (orientation) {
+        case OrientationUnknown:
+            u->voice_call_active = enabling;
+            break;
+        case OrientationLeftUp:
+            u->voice_call_leftup_active = enabling;
+            set_mic_switch(u, p, 1);
+            break;
+        case OrientationRightUp:
+            u->voice_call_rightup_active = enabling;
+            set_mic_switch(u, p, 0);
+            break;
+    }
 
     if (!(am_output = pa_droid_idxset_get_primary(u->old_profile->output_mappings))) {
         pa_log("Active profile doesn't have primary output device.");
         return false;
     }
 
-    if (pa_droid_idxset_mapping_with_device(u->old_profile->input_mappings,
-                                            AUDIO_DEVICE_IN_VOICE_CALL))
-        cp = pa_hashmap_get(u->card->profiles, VOICE_RECORD_PROFILE_NAME);
+    if (pa_droid_idxset_mapping_with_device(u->old_profile->input_mappings, AUDIO_DEVICE_IN_VOICE_CALL)) {
+        cp = pa_hashmap_get(u->card->profiles, name);
+    }
 
-    /* call mode specialities */
     if (enabling) {
         pa_droid_sink_set_voice_control(am_output->sink, true);
         if (cp && cp->available == PA_AVAILABLE_NO) {
-            pa_log_debug("Enable " VOICE_RECORD_PROFILE_NAME " profile.");
+            pa_log_debug("Enable %s profile.", name);
             pa_card_profile_set_available(cp, PA_AVAILABLE_YES);
         }
     } else {
         pa_droid_sink_set_voice_control(am_output->sink, false);
         if (cp && cp->available == PA_AVAILABLE_YES) {
-            pa_log_debug("Disable " VOICE_RECORD_PROFILE_NAME " profile.");
+            pa_log_debug("Disable %s profile.", name);
             pa_card_profile_set_available(cp, PA_AVAILABLE_NO);
         }
     }
@@ -718,6 +640,21 @@ static bool voicecall_profile_event_cb(struct userdata *u, pa_droid_profile *p, 
     update_cover_ui(u);
 
     return true;
+}
+
+static bool voicecall_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling) {
+    pa_log_debug("voicecall_profile_event_cb %d", enabling);
+    return voicecall_earpiece_x_up_profile_event_cb(u, p, enabling, OrientationUnknown, VOICE_RECORD_PROFILE_NAME);
+}
+
+static bool voicecall_earpiece_left_up_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling) {
+    pa_log_debug("voicecall_earpiece_left_up_profile_event_cb %d", enabling);
+    return voicecall_earpiece_x_up_profile_event_cb(u, p, enabling, OrientationLeftUp, VOICE_EARPIECE_LEFT_UP_RECORD_PROFILE_NAME);
+}
+
+static bool voicecall_earpiece_right_up_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling) {
+    pa_log_debug("voicecall_earpiece_right_up_profile_event_cb %d", enabling);
+    return voicecall_earpiece_x_up_profile_event_cb(u, p, enabling, OrientationRightUp, VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_NAME);
 }
 
 #ifdef DROID_AUDIO_HAL_USE_VSID
