@@ -451,7 +451,7 @@ static void set_mic_switch(struct userdata *u, pa_droid_profile *p, bool mic_swi
 }
 
 static void update_audio_routing(struct userdata *u) {
-    pa_log_debug("active profile: %s",u->card->active_profile?u->card->active_profile->name:"NULL");
+    pa_log_debug("update_audio_routing - active profile: %s",u->card->active_profile?u->card->active_profile->name:"NULL");
     pa_log_debug("preferred_input_port: %s",u->card->preferred_input_port?u->card->preferred_input_port->name:"NULL");
     pa_log_debug("preferred_output_port: %s",u->card->preferred_output_port?u->card->preferred_output_port->name:"NULL");
 
@@ -510,9 +510,11 @@ static void extcon_update_state(void *userdata, uint32_t value) {
             u->voice_call_fixed = false;
         }
     }
+    update_cover_ui(u);
 }
 
 static bool in_voice_call(struct userdata *u) {
+    pa_log_debug("in_voice_call vca: %d, vcla: %d, vcra: %d", u->voice_call_active,u->voice_call_leftup_active, u->voice_call_rightup_active);
     return (u->voice_call_active || u->voice_call_leftup_active || u->voice_call_rightup_active);
 }
 
@@ -531,7 +533,7 @@ static void voice_call_fixed(pa_mainloop_api *a, pa_time_event *e, const struct 
 static void update_cover_ui(struct userdata *u) {
     bool needAccel = false;
 
-    pa_log_debug("update_cover_ui o: %d, vcd: %d, mivc: %d", u->accel->o, u->voice_call_fixed, in_voice_call(u));
+    pa_log_debug("update_cover_ui o: %d, vcd: %d, ivc: %d", u->accel->o, u->voice_call_fixed, in_voice_call(u));
     if (in_voice_call(u)) {
         if (!u->voice_call_fixed) {
             needAccel = true;
@@ -598,20 +600,6 @@ static bool voicecall_earpiece_x_up_profile_event_cb(struct userdata *u, pa_droi
     pa_assert(p);
     pa_assert(u->old_profile);
 
-    switch (orientation) {
-        case OrientationUnknown:
-            u->voice_call_active = enabling;
-            break;
-        case OrientationLeftUp:
-            u->voice_call_leftup_active = enabling;
-            set_mic_switch(u, p, 1);
-            break;
-        case OrientationRightUp:
-            u->voice_call_rightup_active = enabling;
-            set_mic_switch(u, p, 0);
-            break;
-    }
-
     if (!(am_output = pa_droid_idxset_get_primary(u->old_profile->output_mappings))) {
         pa_log("Active profile doesn't have primary output device.");
         return false;
@@ -644,16 +632,25 @@ static bool voicecall_earpiece_x_up_profile_event_cb(struct userdata *u, pa_droi
 
 static bool voicecall_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling) {
     pa_log_debug("voicecall_profile_event_cb %d", enabling);
+    u->voice_call_active = enabling;
     return voicecall_earpiece_x_up_profile_event_cb(u, p, enabling, OrientationUnknown, VOICE_RECORD_PROFILE_NAME);
 }
 
 static bool voicecall_earpiece_left_up_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling) {
     pa_log_debug("voicecall_earpiece_left_up_profile_event_cb %d", enabling);
+    u->voice_call_leftup_active = enabling;
+    if (enabling) {
+        set_mic_switch(u, p, 1);
+    }
     return voicecall_earpiece_x_up_profile_event_cb(u, p, enabling, OrientationLeftUp, VOICE_EARPIECE_LEFT_UP_RECORD_PROFILE_NAME);
 }
 
 static bool voicecall_earpiece_right_up_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling) {
     pa_log_debug("voicecall_earpiece_right_up_profile_event_cb %d", enabling);
+    u->voice_call_rightup_active = enabling;
+    if (enabling) {
+        set_mic_switch(u, p, 0);
+    }
     return voicecall_earpiece_x_up_profile_event_cb(u, p, enabling, OrientationRightUp, VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_NAME);
 }
 
