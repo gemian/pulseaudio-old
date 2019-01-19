@@ -37,6 +37,7 @@
 #define DBUS_LEDS_METHOD_CLEAR "ClearLEDBlockAnimation"
 #define DBUS_LEDS_METHOD_STEP "SetLEDBlockStep"
 #define DBUS_LEDS_METHOD_PUSH "PushLEDBlockAnimation"
+#define DBUS_LEDS_METHOD_CALL "SetCall"
 
 typedef enum {
     LedRed,
@@ -91,61 +92,79 @@ static void send_step(pa_droid_cover_ui *u, unsigned int led, pa_droid_led_colou
     send_method_end(u, m);
 }
 
+static void send_call(pa_droid_cover_ui *u, dbus_bool_t earpiece, dbus_bool_t leftUp) {
+    DBusMessageIter i;
+    DBusMessage *m = send_method_start(u, DBUS_LEDS_METHOD_CALL);
+    dbus_message_iter_init_append(m, &i);
+    dbus_message_iter_append_basic(&i, DBUS_TYPE_BOOLEAN, &earpiece);
+    dbus_message_iter_append_basic(&i, DBUS_TYPE_BOOLEAN, &leftUp);
+    send_method_end(u, m);
+}
+
 static void in_call_off(pa_droid_cover_ui *u) {
     send_clear(u);
     send_push(u);
+    send_call(u, false, false);
+}
+
+void pa_droid_cover_ui_in_call_active_up(pa_droid_cover_ui *u, bool leftUp) {
+    send_call(u, true, leftUp);
 }
 
 static void in_call_seeking(pa_droid_cover_ui *u) {
     send_clear(u);
-    send_step(u,1,0,1,160);
-    send_step(u,5,1,1,80);
-    send_step(u,1,0,3,35);
-    send_step(u,1,0,2,255);
-    send_step(u,5,1,2,255);
-    send_step(u,1,0,3,10);
-    send_step(u,1,1,1,80);
-    send_step(u,5,0,1,160);
-    send_step(u,1,0,3,35);
-    send_step(u,1,1,2,255);
-    send_step(u,5,0,2,255);
-    send_step(u,1,0,3,10);
+    send_step(u, 1, 0, 1, 160);
+    send_step(u, 5, 1, 1, 80);
+    send_step(u, 1, 0, 3, 35);
+    send_step(u, 1, 0, 2, 255);
+    send_step(u, 5, 1, 2, 255);
+    send_step(u, 1, 0, 3, 10);
+    send_step(u, 1, 1, 1, 80);
+    send_step(u, 5, 0, 1, 160);
+    send_step(u, 1, 0, 3, 35);
+    send_step(u, 1, 1, 2, 255);
+    send_step(u, 5, 0, 2, 255);
+    send_step(u, 1, 0, 3, 10);
     send_push(u);
 }
 
 static void in_call_seeking_left_up(pa_droid_cover_ui *u) {
     send_clear(u);
-    send_step(u,1,0,0,160);
-    send_step(u,5,1,0,80-50);
-    send_step(u,1,0,3,30);
-    send_step(u,5,1,0,80);
-    send_step(u,1,0,0,160-120);
-    send_step(u,1,0,3,30);
+    send_step(u, 1, 0, 0, 160);
+    send_step(u, 5, 1, 0, 80);
+    send_step(u, 2, 0, 0, 160);
+    send_step(u, 4, 1, 0, 80 - 50);
+    send_step(u, 1, 0, 3, 30);
+    send_step(u, 4, 1, 0, 80);
+    send_step(u, 2, 0, 0, 160 - 120);
+    send_step(u, 1, 0, 3, 30);
     send_push(u);
 }
 
 static void in_call_seeking_right_up(pa_droid_cover_ui *u) {
     send_clear(u);
-    send_step(u,5,0,0,160);
-    send_step(u,1,1,0,80-50);
-    send_step(u,1,0,3,30);
-    send_step(u,1,1,0,80);
-    send_step(u,5,0,0,160-120);
-    send_step(u,1,0,3,30);
+    send_step(u, 5, 0, 0, 160);
+    send_step(u, 1, 1, 0, 80);
+    send_step(u, 4, 0, 0, 160);
+    send_step(u, 2, 1, 0, 80 - 50);
+    send_step(u, 1, 0, 3, 30);
+    send_step(u, 2, 1, 0, 80);
+    send_step(u, 4, 0, 0, 160 - 120);
+    send_step(u, 1, 0, 3, 30);
     send_push(u);
 }
 
 static void in_call_left_up(pa_droid_cover_ui *u) {
     send_clear(u);
-    send_step(u,1,0,0,160);
-    send_step(u,5,1,0,80);
+    send_step(u, 1, 0, 0, 160);
+    send_step(u, 5, 1, 0, 80);
     send_push(u);
 }
 
 static void in_call_right_up(pa_droid_cover_ui *u) {
     send_clear(u);
-    send_step(u,5,0,0,160);
-    send_step(u,1,1,0,80);
+    send_step(u, 5, 0, 0, 160);
+    send_step(u, 1, 1, 0, 80);
     send_push(u);
 }
 

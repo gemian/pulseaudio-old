@@ -36,6 +36,8 @@ pa_droid_cover_ui *pa_droid_cover_ui_new(pa_core *core);
 
 void pa_droid_cover_ui_set_state(pa_droid_cover_ui *u, pa_droid_cover_ui_state state);
 
+void pa_droid_cover_ui_in_call_active_up(pa_droid_cover_ui *u, bool leftUp);
+
 void pa_droid_cover_ui_free(pa_droid_cover_ui *);
 
 #endif //_DROID_COVER_UI_
