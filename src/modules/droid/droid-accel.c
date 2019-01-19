@@ -79,6 +79,8 @@ void pa_droid_accel_enable(pa_droid_accel *accel_data) {
 void pa_droid_accel_disable(pa_droid_accel *accel_data) {
     if (accel_data->active) {
         ua_sensors_accelerometer_disable(accel_data->accelerometer);
+
+        accel_data->active = false;
     }
 }
 
