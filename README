@@ -43,7 +43,7 @@ HACKING:
 	  echo autospawn = no >> ~/.config/pulse/client.conf
 
 	Debug
-	  gdb src/.libs/lt-pulseaudio
+	  gdb src/.libs/pulseaudio
 	  run -n -F /home/adam/source/pulseaudio/src/default.pa -p /home/adam/source/pulseaudio/src/ -vvvv
 
 SPELLING:
