@@ -152,6 +152,7 @@ static bool voicecall_earpiece_right_up_profile_event_cb(struct userdata *u, pa_
 static void update_audio_routing(struct userdata *u);
 static void update_cover_ui(struct userdata *u);
 static void update_state(void *u);
+static bool in_voice_call(struct userdata *u);
 
 struct virtual_profile {
     pa_card_profile *parent;
@@ -500,6 +501,9 @@ static void extcon_update_state(void *userdata, uint32_t value) {
     uint32_t set_index;
     struct userdata *u=userdata;
     pa_log_debug("extcon_update_state");
+    if (!in_voice_call(u)) {
+        return;
+    }
 
     pa_log_debug("active profile: %s",u->card->active_profile->name);
     pa_log_debug("preferred_input_port: %s",u->card->preferred_input_port?u->card->preferred_input_port->name:"NULL");
