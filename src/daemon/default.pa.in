@@ -44,6 +44,8 @@ load-module module-augment-properties
 
 load-module module-null-sink sink_name=sink.null rate=48000
 
+load-module module-stream-restore
+
 ### Switch when connected by default
 load-module module-switch-on-connect skip_abstract=yes
 ### Should be after module-*-restore but before module-*-detect
