@@ -78,7 +78,7 @@ index 264bfdb..5be9218 100644
  
 +# ID 1038:1294 is for Arctis Pro Wireless (which works with the Arctis 7
 +# configuration).
-+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1294", ENV{PULSE_PROFILE_SET}="steelseries-arctis-7-usb-audio.conf"
++ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1294", ENV{PULSE_PROFILE_SET}="steelseries-arctis-usb-audio.conf"
 +
 +
  LABEL="pulseaudio_end"

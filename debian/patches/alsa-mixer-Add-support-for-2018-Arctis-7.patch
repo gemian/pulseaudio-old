@@ -17,7 +17,7 @@ index 5be9218..ffeac61 100644
 +# ID 1038:12ad is for the 2018 refresh of the Arctis 7.
  # ID 1038:1294 is for Arctis Pro Wireless (which works with the Arctis 7
  # configuration).
-+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="12ad", ENV{PULSE_PROFILE_SET}="steelseries-arctis-7-usb-audio.conf"
- ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1294", ENV{PULSE_PROFILE_SET}="steelseries-arctis-7-usb-audio.conf"
++ATTRS{idVendor}=="1038", ATTRS{idProduct}=="12ad", ENV{PULSE_PROFILE_SET}="steelseries-arctis-usb-audio.conf"
+ ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1294", ENV{PULSE_PROFILE_SET}="steelseries-arctis-usb-audio.conf"
  
  
