@@ -468,8 +468,8 @@ static void update_audio_routing(struct userdata *u) {
                     strcmp(u->card->active_profile->name, VOICE_CALL_PROFILE_NAME) == 0 ||
                     strcmp(u->card->active_profile->name, VOICE_EARPIECE_RIGHT_UP_PROFILE_NAME) == 0
             ) ) {
-        pa_log_debug("orientation %d",u->accel->o);
-        if (u->accel->o != OrientationUnknown) {
+        pa_log_debug("orientation %d",(u->accel ? u->accel->o : -1));
+        if (u->accel ? u->accel->o != OrientationUnknown : false) {
             if (u->accel->o == OrientationLeftUp) {
                 if (!u->voice_call_active) {
                     pa_log_debug("set profile voicecall");
@@ -529,7 +529,7 @@ static bool in_voice_call(struct userdata *u) {
 
 static void voice_call_fixed(pa_mainloop_api *a, pa_time_event *e, const struct timeval *t, void *userdata) {
     struct userdata *u = userdata;
-    if (in_voice_call(u) && u->accel->o != OrientationUnknown) {
+    if (in_voice_call(u) && (u->accel ? u->accel->o != OrientationUnknown : true)) {
         u->voice_call_fixed = true;
     }
     pa_assert(e == u->voice_call_fixed_event);
@@ -542,11 +542,11 @@ static void voice_call_fixed(pa_mainloop_api *a, pa_time_event *e, const struct 
 static void update_cover_ui(struct userdata *u) {
     bool needAccel = false;
 
-    pa_log_debug("update_cover_ui o: %d, vcd: %d, ivc: %d", u->accel->o, u->voice_call_fixed, in_voice_call(u));
+    pa_log_debug("update_cover_ui o: %d, vcd: %d, ivc: %d", (u->accel ? u->accel->o : -1), u->voice_call_fixed, in_voice_call(u));
     if (in_voice_call(u)) {
         if (!u->voice_call_fixed) {
             needAccel = true;
-            if (u->accel->o != OrientationUnknown && !u->voice_call_fixed_event) {
+            if ((u->accel ? u->accel->o != OrientationUnknown : true) && !u->voice_call_fixed_event) {
                 u->voice_call_fixed_event = pa_core_rttime_new(u->core, pa_rtclock_now() + (PA_USEC_PER_SEC * ORIENTATION_FIX_TIME),
                                                                voice_call_fixed, u);
             }
@@ -561,7 +561,7 @@ static void update_cover_ui(struct userdata *u) {
         pa_droid_accel_disable(u->accel);
     }
     if (in_voice_call(u)) {
-        switch (u->accel->o) {
+        switch (u->accel ? u->accel->o : OrientationUnknown) {
             case OrientationUnknown:
                 pa_droid_cover_ui_set_state(u->cover_ui, CoverUiSeeking);
                 break;

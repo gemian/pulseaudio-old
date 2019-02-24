@@ -77,7 +77,7 @@ void pa_droid_accel_enable(pa_droid_accel *accel_data) {
 }
 
 void pa_droid_accel_disable(pa_droid_accel *accel_data) {
-    if (accel_data->active) {
+    if (accel_data && accel_data->active) {
         ua_sensors_accelerometer_disable(accel_data->accelerometer);
 
         accel_data->active = false;
@@ -85,8 +85,10 @@ void pa_droid_accel_disable(pa_droid_accel *accel_data) {
 }
 
 void pa_droid_accel_set_cb(pa_droid_accel *accel_data, accel_update_callback cb, void *data) {
-    accel_data->updateCallback = cb;
-    accel_data->updateCallbackData = data;
+    if (accel_data) {
+        accel_data->updateCallback = cb;
+        accel_data->updateCallbackData = data;
+    }
 }
 
 pa_droid_accel *pa_droid_accel_new() {
