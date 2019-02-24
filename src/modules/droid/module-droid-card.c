@@ -469,8 +469,8 @@ static void update_audio_routing(struct userdata *u) {
                     strcmp(u->card->active_profile->name, VOICE_EARPIECE_RIGHT_UP_PROFILE_NAME) == 0
             ) ) {
         pa_log_debug("orientation %d",(u->accel ? u->accel->o : -1));
-        if (u->accel ? u->accel->o != OrientationUnknown : false) {
-            if (u->accel->o == OrientationLeftUp) {
+        if (u->accel ? u->accel->o != OrientationUnknown : true) {
+            if (u->accel ? u->accel->o == OrientationLeftUp : false) {
                 if (!u->voice_call_active) {
                     pa_log_debug("set profile voicecall");
                     if (pa_card_set_profile(u->card, pa_hashmap_get(u->card->profiles,
