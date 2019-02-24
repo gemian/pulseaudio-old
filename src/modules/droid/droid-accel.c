@@ -65,7 +65,7 @@ static void on_new_accelerometer_event(UASAccelerometerEvent *event, void *conte
 }
 
 void pa_droid_accel_enable(pa_droid_accel *accel_data) {
-    if (!accel_data->active) {
+    if (accel_data && !accel_data->active) {
         ua_sensors_accelerometer_set_reading_cb(accel_data->accelerometer,
                                                 on_new_accelerometer_event,
                                                 accel_data);
