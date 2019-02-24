@@ -143,3 +143,7 @@ load-module module-position-event-sounds
 ### loading modules and rerouting streams.
 load-module module-filter-heuristics
 load-module module-filter-apply
+
+### Make some devices default
+set-default-sink sink.primary
+set-default-source source.primary
