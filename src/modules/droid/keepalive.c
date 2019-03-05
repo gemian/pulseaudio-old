@@ -44,7 +44,7 @@
 
 #define KEEP_ALIVE_BUS (DBUS_BUS_SYSTEM)
 #define KEEP_ALIVE_DBUS_NAME        "org.thinkglobally.Gemian.Audio.KeepAlive"
-#define KEEP_ALIVE_DBUS_PATH        "/org/thinkglobally/Gemian/Audio.KeepAlive"
+#define KEEP_ALIVE_DBUS_PATH        "/org/thinkglobally/Gemian/Audio/KeepAlive"
 #define KEEP_ALIVE_DBUS_IFACE       "org.thinkglobally.Gemian.Audio.KeepAlive"
 #define KEEP_ALIVE_DBUS_ACTIVE_REQ  "KeepAlive"
 #define KEEP_ALIVE_DBUS_STOP_REQ    "Stop"
@@ -125,8 +125,6 @@ static void keepalive_start(pa_droid_keepalive *k) {
 }
 
 void pa_droid_keepalive_start(pa_droid_keepalive *k) {
-    DBusMessage *msg = NULL;
-
     pa_assert(k);
 
     /* Only allow first call go through. pa_atomic_inc() returns previous value before incrementing. */

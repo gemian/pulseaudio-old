@@ -42,7 +42,7 @@
 
 #define HEADPHONE_CS_BUS (DBUS_BUS_SYSTEM)
 #define HEADPHONE_CS_DBUS_NAME          "org.thinkglobally.Gemian.Audio.HeadphoneCS"
-#define HEADPHONE_CS_DBUS_PATH          "/org/thinkglobally/Gemian/Audio.HeadphoneCS"
+#define HEADPHONE_CS_DBUS_PATH          "/org/thinkglobally/Gemian/Audio/HeadphoneCS"
 #define HEADPHONE_CS_DBUS_IFACE         "org.thinkglobally.Gemian.Audio.HeadphoneCS"
 #define HEADPHONE_CS_DBUS_LEFT_SPEAKER  "Left"
 #define HEADPHONE_CS_DBUS_RIGHT_SPEAKER "Right"
