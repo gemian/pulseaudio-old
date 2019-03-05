@@ -42,13 +42,12 @@
 
 #include "keepalive.h"
 
-#define MCE_BUS (DBUS_BUS_SYSTEM)
-#define MCE_DBUS_NAME                   "com.nokia.mce"
-#define MCE_DBUS_PATH                   "/com/nokia/mce/request"
-#define MCE_DBUS_IFACE                  "com.nokia.mce.request"
-#define MCE_DBUS_KEEPALIVE_PERIOD_REQ   "req_cpu_keepalive_period"
-#define MCE_DBUS_KEEPALIVE_START_REQ    "req_cpu_keepalive_start"
-#define MCE_DBUS_KEEPALIVE_STOP_REQ     "req_cpu_keepalive_stop"
+#define KEEP_ALIVE_BUS (DBUS_BUS_SYSTEM)
+#define KEEP_ALIVE_DBUS_NAME        "org.thinkglobally.Gemian.Audio.KeepAlive"
+#define KEEP_ALIVE_DBUS_PATH        "/org/thinkglobally/Gemian/Audio.KeepAlive"
+#define KEEP_ALIVE_DBUS_IFACE       "org.thinkglobally.Gemian.Audio.KeepAlive"
+#define KEEP_ALIVE_DBUS_ACTIVE_REQ  "KeepAlive"
+#define KEEP_ALIVE_DBUS_STOP_REQ    "Stop"
 
 struct pa_droid_keepalive {
     pa_core *core;
@@ -70,9 +69,9 @@ pa_droid_keepalive* pa_droid_keepalive_new(pa_core *c) {
 
     dbus_error_init(&error);
 
-    dbus = pa_dbus_bus_get(c, MCE_BUS, &error);
+    dbus = pa_dbus_bus_get(c, KEEP_ALIVE_BUS, &error);
     if (dbus_error_is_set(&error)) {
-        pa_log("Failed to get %s bus: %s", MCE_BUS == DBUS_BUS_SESSION ? "session" : "system", error.message);
+        pa_log("Failed to get %s bus: %s", KEEP_ALIVE_BUS == DBUS_BUS_SESSION ? "session" : "system", error.message);
         dbus_error_free(&error);
         return NULL;
     }
@@ -93,10 +92,10 @@ static void send_dbus_signal(pa_dbus_connection *dbus) {
 
     /* pa_log_debug("Send keepalive heartbeat."); */
 
-    pa_assert_se((msg = dbus_message_new_method_call(MCE_DBUS_NAME,
-                                                     MCE_DBUS_PATH,
-                                                     MCE_DBUS_IFACE,
-                                                     MCE_DBUS_KEEPALIVE_START_REQ)));
+    pa_assert_se((msg = dbus_message_new_method_call(KEEP_ALIVE_DBUS_NAME,
+                                                     KEEP_ALIVE_DBUS_PATH,
+                                                     KEEP_ALIVE_DBUS_IFACE,
+                                                     KEEP_ALIVE_DBUS_ACTIVE_REQ)));
 
     dbus_connection_send(pa_dbus_connection_get(dbus), msg, NULL);
     dbus_message_unref(msg);
@@ -125,36 +124,6 @@ static void keepalive_start(pa_droid_keepalive *k) {
     k->timer_event = pa_core_rttime_new(k->core, pa_rtclock_now() + k->timeout, keepalive_cb, k);
 }
 
-static void pending_req_reply_cb(DBusPendingCall *pending, void *userdata) {
-    pa_droid_keepalive *k = userdata;
-    DBusMessage *msg;
-    uint32_t period;
-
-    pa_assert(pending);
-    pa_assert(k);
-    pa_assert(pending == k->pending);
-
-    k->pending = NULL;
-    pa_assert_se(msg = dbus_pending_call_steal_reply(pending));
-
-    if (dbus_message_get_type(msg) == DBUS_MESSAGE_TYPE_ERROR) {
-        pa_log("Failed to get %s", MCE_DBUS_KEEPALIVE_PERIOD_REQ);
-        goto finish;
-    }
-
-    pa_assert_se(dbus_message_get_args(msg, NULL,
-                                       DBUS_TYPE_INT32, &period,
-                                       DBUS_TYPE_INVALID));
-
-    k->timeout = PA_USEC_PER_SEC * period;
-
-    keepalive_start(k);
-
-finish:
-    dbus_message_unref(msg);
-    dbus_pending_call_unref(pending);
-}
-
 void pa_droid_keepalive_start(pa_droid_keepalive *k) {
     DBusMessage *msg = NULL;
 
@@ -167,28 +136,9 @@ void pa_droid_keepalive_start(pa_droid_keepalive *k) {
     pa_assert(!k->timer_event);
     pa_assert(!k->pending);
 
-    /* Period time already requested, just start hearbeat. */
-    if (k->timeout > 0) {
-        keepalive_start(k);
-        return;
-    }
+    k->timeout = PA_USEC_PER_SEC * 60;// 1min keepalive period
 
-    pa_log_debug("Starting keepalive - Request keepalive period.");
-    /* Send first keepalive heartbeat immediately. */
-    send_dbus_signal(k->dbus_connection);
-
-    pa_assert_se((msg = dbus_message_new_method_call(MCE_DBUS_NAME,
-                                                     MCE_DBUS_PATH,
-                                                     MCE_DBUS_IFACE,
-                                                     MCE_DBUS_KEEPALIVE_PERIOD_REQ)));
-
-    dbus_connection_send_with_reply(pa_dbus_connection_get(k->dbus_connection), msg, &k->pending, -1);
-    dbus_message_unref(msg);
-
-    if (k->pending)
-        dbus_pending_call_set_notify(k->pending, pending_req_reply_cb, k, NULL);
-    else
-        pa_log("D-Bus method call failed.");
+    keepalive_start(k);
 }
 
 void pa_droid_keepalive_stop(pa_droid_keepalive *k) {
@@ -215,10 +165,10 @@ void pa_droid_keepalive_stop(pa_droid_keepalive *k) {
         k->timer_event = NULL;
     }
 
-    pa_assert_se((msg = dbus_message_new_method_call(MCE_DBUS_NAME,
-                                                     MCE_DBUS_PATH,
-                                                     MCE_DBUS_IFACE,
-                                                     MCE_DBUS_KEEPALIVE_STOP_REQ)));
+    pa_assert_se((msg = dbus_message_new_method_call(KEEP_ALIVE_DBUS_NAME,
+                                                     KEEP_ALIVE_DBUS_PATH,
+                                                     KEEP_ALIVE_DBUS_IFACE,
+                                                     KEEP_ALIVE_DBUS_STOP_REQ)));
 
     dbus_connection_send(pa_dbus_connection_get(k->dbus_connection), msg, NULL);
     dbus_message_unref(msg);

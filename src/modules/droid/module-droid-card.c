@@ -70,6 +70,7 @@
 #endif
 #include "droid-accel.h"
 #include "droid-cover-ui.h"
+#include "droid-earpiece-select.h"
 
 PA_MODULE_AUTHOR("Juho Hämäläinen");
 PA_MODULE_DESCRIPTION("Droid card");
@@ -179,6 +180,7 @@ struct userdata {
 #endif
     pa_droid_accel *accel;
     pa_droid_cover_ui *cover_ui;
+    pa_droid_earpiece_select *earpiece_select;
 
     pa_modargs *modargs;
     pa_card *card;
@@ -447,6 +449,10 @@ static void set_mic_switch(struct userdata *u, pa_droid_profile *p, bool mic_swi
     pa_xfree(setparam);
 }
 
+static void set_earpiece_select(struct userdata *u, bool earpiece_select) {
+    pa_droid_earpiece_select(u->earpiece_select, earpiece_select);
+}
+
 static void update_audio_routing(struct userdata *u) {
     pa_sink *sink=NULL;
     uint32_t set_index;
@@ -650,6 +656,7 @@ static bool voicecall_profile_event_cb(struct userdata *u, pa_droid_profile *p, 
     u->voice_call_active = enabling;
     if (enabling) {
         set_mic_switch(u, p, 1);
+        set_earpiece_select(0);
         u->voice_call_rightup_active = false;
     }
     return voicecall_earpiece_x_up_profile_event_cb(u, p, enabling, OrientationUnknown, VOICE_RECORD_PROFILE_NAME);
@@ -660,6 +667,7 @@ static bool voicecall_earpiece_right_up_profile_event_cb(struct userdata *u, pa_
     u->voice_call_rightup_active = enabling;
     if (enabling) {
         set_mic_switch(u, p, 0);
+        set_earpiece_select(1);
         u->voice_call_active = false;
     }
     return voicecall_earpiece_x_up_profile_event_cb(u, p, enabling, OrientationRightUp, VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_NAME);
@@ -1039,6 +1047,7 @@ int pa__init(pa_module *m) {
 #endif
     u->accel = pa_droid_accel_new();
     u->cover_ui = pa_droid_cover_ui_new(m->core);
+    u->earpiece_select = pa_droid_earpiece_select_new(m->core);
 
     return 0;
 
@@ -1075,6 +1084,10 @@ void pa__done(pa_module *m) {
 
         if (u->cover_ui) {
             pa_droid_cover_ui_free(u->cover_ui);
+        }
+
+        if (u->earpiece_select) {
+            pa_droid_earpiece_select_free(u->earpiece_select);
         }
 
         if (u->accel) {
