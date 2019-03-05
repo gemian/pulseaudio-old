@@ -43,11 +43,11 @@
 #include "keepalive.h"
 
 #define KEEP_ALIVE_BUS (DBUS_BUS_SYSTEM)
-#define KEEP_ALIVE_DBUS_NAME        "org.thinkglobally.Gemian.Audio.KeepAlive"
-#define KEEP_ALIVE_DBUS_PATH        "/org/thinkglobally/Gemian/Audio/KeepAlive"
-#define KEEP_ALIVE_DBUS_IFACE       "org.thinkglobally.Gemian.Audio.KeepAlive"
-#define KEEP_ALIVE_DBUS_ACTIVE_REQ  "KeepAlive"
-#define KEEP_ALIVE_DBUS_STOP_REQ    "Stop"
+#define KEEP_ALIVE_DBUS_NAME        "org.thinkglobally.Gemian.Audio"
+#define KEEP_ALIVE_DBUS_PATH        "/org/thinkglobally/Gemian/Audio"
+#define KEEP_ALIVE_DBUS_IFACE       "org.thinkglobally.Gemian.Audio"
+#define KEEP_ALIVE_DBUS_METHOD      "SetAudioKeepAlive"
+#define KEEP_ALIVE_DBUS_ACTIVE_REQ  "active"
 
 struct pa_droid_keepalive {
     pa_core *core;
@@ -87,6 +87,7 @@ pa_droid_keepalive* pa_droid_keepalive_new(pa_core *c) {
 
 static void send_dbus_signal(pa_dbus_connection *dbus) {
     DBusMessage *msg;
+    dbus_bool_t active = true;
 
     pa_assert(dbus);
 
@@ -95,7 +96,8 @@ static void send_dbus_signal(pa_dbus_connection *dbus) {
     pa_assert_se((msg = dbus_message_new_method_call(KEEP_ALIVE_DBUS_NAME,
                                                      KEEP_ALIVE_DBUS_PATH,
                                                      KEEP_ALIVE_DBUS_IFACE,
-                                                     KEEP_ALIVE_DBUS_ACTIVE_REQ)));
+                                                     KEEP_ALIVE_DBUS_METHOD)));
+    dbus_message_append_args(msg, DBUS_TYPE_BOOLEAN, &active, DBUS_TYPE_INVALID);
 
     dbus_connection_send(pa_dbus_connection_get(dbus), msg, NULL);
     dbus_message_unref(msg);
@@ -141,6 +143,7 @@ void pa_droid_keepalive_start(pa_droid_keepalive *k) {
 
 void pa_droid_keepalive_stop(pa_droid_keepalive *k) {
     DBusMessage *msg;
+    dbus_bool_t inactive = false;
 
     pa_assert(k);
 
@@ -166,7 +169,8 @@ void pa_droid_keepalive_stop(pa_droid_keepalive *k) {
     pa_assert_se((msg = dbus_message_new_method_call(KEEP_ALIVE_DBUS_NAME,
                                                      KEEP_ALIVE_DBUS_PATH,
                                                      KEEP_ALIVE_DBUS_IFACE,
-                                                     KEEP_ALIVE_DBUS_STOP_REQ)));
+                                                     KEEP_ALIVE_DBUS_METHOD)));
+    dbus_message_append_args(msg, DBUS_TYPE_BOOLEAN, &inactive, DBUS_TYPE_INVALID);
 
     dbus_connection_send(pa_dbus_connection_get(k->dbus_connection), msg, NULL);
     dbus_message_unref(msg);

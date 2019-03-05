@@ -41,9 +41,10 @@
 #include "droid-earpiece-select.h"
 
 #define HEADPHONE_CS_BUS (DBUS_BUS_SYSTEM)
-#define HEADPHONE_CS_DBUS_NAME          "org.thinkglobally.Gemian.Audio.HeadphoneCS"
-#define HEADPHONE_CS_DBUS_PATH          "/org/thinkglobally/Gemian/Audio/HeadphoneCS"
-#define HEADPHONE_CS_DBUS_IFACE         "org.thinkglobally.Gemian.Audio.HeadphoneCS"
+#define HEADPHONE_CS_DBUS_NAME          "org.thinkglobally.Gemian.Audio"
+#define HEADPHONE_CS_DBUS_PATH          "/org/thinkglobally/Gemian/Audio"
+#define HEADPHONE_CS_DBUS_IFACE         "org.thinkglobally.Gemian.Audio"
+#define HEADPHONE_CS_DBUS_METHOD        "SetAudioHeadphoneCS"
 #define HEADPHONE_CS_DBUS_LEFT_SPEAKER  "Left"
 #define HEADPHONE_CS_DBUS_RIGHT_SPEAKER "Right"
 
@@ -75,7 +76,7 @@ pa_droid_earpiece_select* pa_droid_earpiece_select_new(pa_core *c) {
     return k;
 }
 
-static void send_dbus_signal(pa_dbus_connection *dbus, const char * method) {
+static void send_dbus_signal(pa_dbus_connection *dbus, const char *value) {
     DBusMessage *msg;
 
     pa_assert(dbus);
@@ -83,7 +84,8 @@ static void send_dbus_signal(pa_dbus_connection *dbus, const char * method) {
     pa_assert_se((msg = dbus_message_new_method_call(HEADPHONE_CS_DBUS_NAME,
                                                      HEADPHONE_CS_DBUS_PATH,
                                                      HEADPHONE_CS_DBUS_IFACE,
-                                                     method)));
+                                                     HEADPHONE_CS_DBUS_METHOD)));
+    dbus_message_append_args(msg, DBUS_TYPE_STRING, &value, DBUS_TYPE_INVALID);
 
     dbus_connection_send(pa_dbus_connection_get(dbus), msg, NULL);
     dbus_message_unref(msg);
