@@ -47,13 +47,13 @@
 #define HEADPHONE_CS_DBUS_LEFT_SPEAKER  "Left"
 #define HEADPHONE_CS_DBUS_RIGHT_SPEAKER "Right"
 
-struct pa_droid_keepalive {
+struct pa_droid_earpiece_select {
     pa_core *core;
     pa_dbus_connection *dbus_connection;
 };
 
-pa_droid_keepalive* pa_droid_keepalive_new(pa_core *c) {
-    pa_droid_keepalive *k;
+pa_droid_earpiece_select* pa_droid_earpiece_select_new(pa_core *c) {
+    pa_droid_earpiece_select *k;
     pa_dbus_connection *dbus;
     DBusError error;
 
@@ -68,7 +68,7 @@ pa_droid_keepalive* pa_droid_keepalive_new(pa_core *c) {
         return NULL;
     }
 
-    k = pa_xnew0(pa_droid_keepalive, 1);
+    k = pa_xnew0(pa_droid_earpiece_select, 1);
     k->core = c;
     k->dbus_connection = dbus;
 
@@ -89,23 +89,13 @@ static void send_dbus_signal(pa_dbus_connection *dbus, const char * method) {
     dbus_message_unref(msg);
 }
 
-void pa_droid_earpiece_select(pa_droid_earpiece_select *k, bool earpiece_select) {
+void pa_droid_earpiece_select_update(pa_droid_earpiece_select *k, bool earpiece_select) {
     send_dbus_signal(k->dbus_connection, earpiece_select?HEADPHONE_CS_DBUS_LEFT_SPEAKER:HEADPHONE_CS_DBUS_RIGHT_SPEAKER);
 }
 
-void pa_droid_keepalive_free(pa_droid_keepalive *k) {
+void pa_droid_earpiece_select_free(pa_droid_earpiece_select *k) {
     pa_assert(k);
     pa_assert(k->dbus_connection);
-
-    pa_assert(pa_atomic_load(&k->started) == 0);
-
-    if (k->timer_event)
-        k->core->mainloop->time_free(k->timer_event);
-
-    if (k->pending) {
-        dbus_pending_call_cancel(k->pending);
-        dbus_pending_call_unref(k->pending);
-    }
 
     pa_dbus_connection_unref(k->dbus_connection);
     pa_xfree(k);

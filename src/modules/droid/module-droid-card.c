@@ -450,7 +450,7 @@ static void set_mic_switch(struct userdata *u, pa_droid_profile *p, bool mic_swi
 }
 
 static void set_earpiece_select(struct userdata *u, bool earpiece_select) {
-    pa_droid_earpiece_select(u->earpiece_select, earpiece_select);
+    pa_droid_earpiece_select_update(u->earpiece_select, earpiece_select);
 }
 
 static void update_audio_routing(struct userdata *u) {
@@ -656,7 +656,7 @@ static bool voicecall_profile_event_cb(struct userdata *u, pa_droid_profile *p, 
     u->voice_call_active = enabling;
     if (enabling) {
         set_mic_switch(u, p, 1);
-        set_earpiece_select(0);
+        set_earpiece_select(u, 0);
         u->voice_call_rightup_active = false;
     }
     return voicecall_earpiece_x_up_profile_event_cb(u, p, enabling, OrientationUnknown, VOICE_RECORD_PROFILE_NAME);
@@ -667,7 +667,7 @@ static bool voicecall_earpiece_right_up_profile_event_cb(struct userdata *u, pa_
     u->voice_call_rightup_active = enabling;
     if (enabling) {
         set_mic_switch(u, p, 0);
-        set_earpiece_select(1);
+        set_earpiece_select(u, 1);
         u->voice_call_active = false;
     }
     return voicecall_earpiece_x_up_profile_event_cb(u, p, enabling, OrientationRightUp, VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_NAME);

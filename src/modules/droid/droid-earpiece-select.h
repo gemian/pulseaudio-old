@@ -35,6 +35,6 @@ typedef struct pa_droid_earpiece_select pa_droid_earpiece_select;
 pa_droid_earpiece_select* pa_droid_earpiece_select_new(pa_core *c);
 void pa_droid_earpiece_select_free(pa_droid_earpiece_select *k);
 
-void pa_droid_earpiece_select(pa_droid_earpiece_select *k, bool earpiece_select);
+void pa_droid_earpiece_select_update(pa_droid_earpiece_select *k, bool earpiece_select);
 
 #endif //_EARPIECE_SELECT_H_
