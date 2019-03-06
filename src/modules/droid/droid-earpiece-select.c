@@ -92,7 +92,7 @@ static void send_dbus_signal(pa_dbus_connection *dbus, const char *value) {
 }
 
 void pa_droid_earpiece_select_update(pa_droid_earpiece_select *k, bool earpiece_select) {
-    send_dbus_signal(k->dbus_connection, earpiece_select?HEADPHONE_CS_DBUS_LEFT_SPEAKER:HEADPHONE_CS_DBUS_RIGHT_SPEAKER);
+    send_dbus_signal(k->dbus_connection, earpiece_select?HEADPHONE_CS_DBUS_RIGHT_SPEAKER:HEADPHONE_CS_DBUS_LEFT_SPEAKER);
 }
 
 void pa_droid_earpiece_select_free(pa_droid_earpiece_select *k) {
