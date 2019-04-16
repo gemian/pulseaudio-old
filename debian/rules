@@ -23,6 +23,7 @@ DEB_CONFIGURE_EXTRA_FLAGS = --enable-x11 --disable-hal-compat \
   --with-bash-completion-dir=\$${datadir}/bash-completion/completions \
   --with-systemduserunitdir=\$${prefix}/lib/systemd/user \
   --disable-bluez4 \
+  --disable-esound \
   --enable-gsettings \
   --disable-gconf
 
