@@ -1880,6 +1880,19 @@ module_droid_card_la_LIBADD += $(UDEV_LIBS)
 module_droid_card_la_CFLAGS += $(UDEV_CFLAGS)
 endif
 
+module_droid_card_la_SOURCES += modules/droid/droid-accel.c
+module_droid_card_la_LDFLAGS += -lubuntu_application_api
+module_droid_card_la_LIBADD += $(DBUS_LIBS)
+module_droid_card_la_CFLAGS += $(DBUS_CFLAGS)
+
+module_droid_card_la_SOURCES += modules/droid/droid-cover-ui.c
+module_droid_card_la_LIBADD += $(DBUS_LIBS)
+module_droid_card_la_CFLAGS += $(DBUS_CFLAGS)
+
+module_droid_card_la_SOURCES += modules/droid/droid-earpiece-select.c
+module_droid_card_la_LIBADD += $(DBUS_LIBS)
+module_droid_card_la_CFLAGS += $(DBUS_CFLAGS)
+
 module_droid_glue_la_SOURCES = modules/droid/audioflingerglue-hybris.c modules/droid/module-droid-glue.c
 module_droid_glue_la_LDFLAGS = $(MODULE_LDFLAGS) -lm -lhybris-common
 module_droid_glue_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la
