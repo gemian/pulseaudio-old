@@ -25,6 +25,7 @@
 
 #include <signal.h>
 #include <stdio.h>
+#include <time.h>
 
 #ifdef HAVE_VALGRIND_MEMCHECK_H
 #include <valgrind/memcheck.h>
@@ -62,9 +63,13 @@
 #include "droid-util.h"
 #include "droid-sink.h"
 #include "droid-source.h"
+
 #ifdef HAVE_UDEV
 #include "droid-extcon.h"
 #endif
+#include "droid-accel.h"
+#include "droid-cover-ui.h"
+#include "droid-earpiece-select.h"
 
 PA_MODULE_AUTHOR("Juho Hämäläinen");
 PA_MODULE_DESCRIPTION("Droid card");
@@ -130,10 +135,24 @@ static const char* const valid_modargs[] = {
 #define RINGTONE_PROFILE_DESC       "Ringtone mode"
 #define COMMUNICATION_PROFILE_NAME  "communication"
 #define COMMUNICATION_PROFILE_DESC  "Communication mode"
+#define VOICE_EARPIECE_RIGHT_UP_PROFILE_NAME "voicecall-rightup"
+#define VOICE_EARPIECE_RIGHT_UP_PROFILE_DESC "Call mode (RightUp)"
+#define VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_NAME   "voicecall-record-rightup"
+#define VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_DESC   "Call mode record"
+
+#define ORIENTATION_FIX_TIME 10
+//#define ORIENTATION_FIX_TIME 50
 
 struct userdata;
 
 typedef bool (*virtual_profile_event_cb)(struct userdata *u, pa_droid_profile *p, bool enabling);
+
+static bool voicecall_earpiece_x_up_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling, calls_orientation orientation, const char*name);
+static bool voicecall_earpiece_right_up_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling);
+static void update_audio_routing(struct userdata *u);
+static void update_cover_ui(struct userdata *u);
+static void update_state(void *u);
+static bool in_voice_call(struct userdata *u);
 
 struct virtual_profile {
     pa_card_profile *parent;
@@ -158,9 +177,17 @@ struct userdata {
 #ifdef HAVE_UDEV
     pa_droid_extcon *extcon;
 #endif
+    pa_droid_accel *accel;
+    pa_droid_cover_ui *cover_ui;
+    pa_droid_earpiece_select *earpiece_select;
 
     pa_modargs *modargs;
     pa_card *card;
+
+    bool voice_call_active;
+    bool voice_call_rightup_active;
+    bool voice_call_fixed;
+    pa_time_event *voice_call_fixed_event;
 };
 
 struct profile_data {
@@ -389,14 +416,18 @@ static int set_mode(struct userdata *u, audio_mode_t mode) {
             break;
         case AUDIO_MODE_IN_CALL:
             mode_str = "AUDIO_MODE_IN_CALL";
+            u->voice_call_fixed = false;
             break;
         case AUDIO_MODE_IN_COMMUNICATION:
             mode_str = "AUDIO_MODE_IN_COMMUNICATION";
             break;
         default:
             mode_str = "AUDIO_MODE_NORMAL";
+            u->voice_call_active = false;
+            u->voice_call_rightup_active = false;
             break;
     }
+    update_state(u);
 
     pa_log_debug("Set mode to %s.", mode_str);
 
@@ -406,6 +437,155 @@ static int set_mode(struct userdata *u, audio_mode_t mode) {
     pa_droid_hw_module_unlock(u->hw_module);
 
     return ret;
+}
+
+static void set_mic_switch(struct userdata *u, pa_droid_profile *p, bool mic_switch) {
+    char *setparam;
+
+    setparam = pa_sprintf_malloc("MicSwitch=%u",mic_switch);
+    pa_droid_set_parameters(u->hw_module, setparam);
+
+    pa_xfree(setparam);
+}
+
+static void set_earpiece_select(struct userdata *u, bool earpiece_select) {
+    pa_droid_earpiece_select_update(u->earpiece_select, earpiece_select);
+}
+
+static void update_audio_routing(struct userdata *u) {
+    pa_sink *sink=NULL;
+    uint32_t set_index;
+    bool earpiece_active = false;
+
+    pa_log_debug("update_audio_routing - active profile: %s",u->card->active_profile?u->card->active_profile->name:"NULL");
+    pa_log_debug("preferred_input_port: %s",u->card->preferred_input_port?u->card->preferred_input_port->name:"NULL");
+    pa_log_debug("preferred_output_port: %s",u->card->preferred_output_port?u->card->preferred_output_port->name:"NULL");
+
+    PA_IDXSET_FOREACH(sink, u->core->sinks, set_index) {
+        pa_log_debug("sink: %s, active_port: %s", sink->name, sink->active_port ? sink->active_port->name : "NULL");
+        if (sink->active_port && (strcmp(sink->active_port->name, "output-earpiece") == 0)) {
+            pa_log_debug("earpiece active - sink: %s", sink->name);
+            earpiece_active = true;
+        }
+    }
+
+    if (u->card->active_profile && earpiece_active && (
+                    strcmp(u->card->active_profile->name, VOICE_CALL_PROFILE_NAME) == 0 ||
+                    strcmp(u->card->active_profile->name, VOICE_EARPIECE_RIGHT_UP_PROFILE_NAME) == 0
+            ) ) {
+        pa_log_debug("orientation %d",(u->accel ? u->accel->o : -1));
+        if (u->accel ? u->accel->o != OrientationUnknown : true) {
+            if (u->accel ? u->accel->o == OrientationLeftUp : false) {
+                if (!u->voice_call_active) {
+                    pa_log_debug("set profile voicecall");
+                    if (pa_card_set_profile(u->card, pa_hashmap_get(u->card->profiles,
+                            VOICE_CALL_PROFILE_NAME), false) != 0) {
+                        pa_log_debug("Could not set profile voicecall");
+                    }
+                }
+            } else {
+                if (!u->voice_call_rightup_active) {
+                    pa_log_debug("set profile voicecall-rightup");
+                    if (pa_card_set_profile(u->card, pa_hashmap_get(u->card->profiles,
+                            VOICE_EARPIECE_RIGHT_UP_PROFILE_NAME), false) != 0) {
+                        pa_log_debug("Could not set profile voicecall-rightup");
+                    }
+                }
+            }
+        }
+    }
+}
+
+static void update_state(void *u) {
+    update_audio_routing(u);
+    update_cover_ui(u);
+}
+
+static void extcon_update_state(void *userdata, uint32_t value) {
+    pa_sink *sink=NULL;
+    uint32_t set_index;
+    struct userdata *u=userdata;
+    pa_log_debug("extcon_update_state");
+    if (!in_voice_call(u)) {
+        return;
+    }
+
+    pa_log_debug("active profile: %s",u->card->active_profile->name);
+    pa_log_debug("preferred_input_port: %s",u->card->preferred_input_port?u->card->preferred_input_port->name:"NULL");
+    pa_log_debug("preferred_output_port: %s",u->card->preferred_output_port?u->card->preferred_output_port->name:"NULL");
+
+    PA_IDXSET_FOREACH(sink, u->core->sinks, set_index) {
+        pa_log_debug("sink: %s",sink->name);
+        if (sink->active_port && strcmp(sink->active_port->name, "output-earpiece") == 0 && value == 1) {
+            pa_sink_set_port(sink, "output-speaker", false);
+        }
+        if (sink->active_port && strcmp(sink->active_port->name, "output-speaker") == 0 && value == 0) {
+            pa_sink_set_port(sink, "output-earpiece", false);
+            u->voice_call_fixed = false;
+        }
+    }
+    update_cover_ui(u);
+}
+
+static bool in_voice_call(struct userdata *u) {
+    pa_log_debug("in_voice_call vca: %d, vcra: %d", u->voice_call_active, u->voice_call_rightup_active);
+    return (u->voice_call_active || u->voice_call_rightup_active);
+}
+
+static void voice_call_fixed(pa_mainloop_api *a, pa_time_event *e, const struct timeval *t, void *userdata) {
+    struct userdata *u = userdata;
+    if (in_voice_call(u) && (u->accel ? u->accel->o != OrientationUnknown : true)) {
+        u->voice_call_fixed = true;
+    }
+    pa_assert(e == u->voice_call_fixed_event);
+    u->core->mainloop->time_free(u->voice_call_fixed_event);
+    u->voice_call_fixed_event = NULL;
+
+    update_cover_ui(u);
+}
+
+static void update_cover_ui(struct userdata *u) {
+    bool needAccel = false;
+
+    pa_log_debug("update_cover_ui o: %d, vcd: %d, ivc: %d", (u->accel ? u->accel->o : -1), u->voice_call_fixed, in_voice_call(u));
+    if (in_voice_call(u)) {
+        if (!u->voice_call_fixed) {
+            needAccel = true;
+            if ((u->accel ? u->accel->o != OrientationUnknown : true) && !u->voice_call_fixed_event) {
+                u->voice_call_fixed_event = pa_core_rttime_new(u->core, pa_rtclock_now() + (PA_USEC_PER_SEC * ORIENTATION_FIX_TIME),
+                                                               voice_call_fixed, u);
+            }
+        }
+    }
+    pa_log_debug("update_cover_ui na: %d, f: %d", needAccel, u->voice_call_fixed);
+
+    if (needAccel) {
+        pa_droid_accel_set_cb(u->accel, update_state, u);
+        pa_droid_accel_enable(u->accel);
+    } else {
+        pa_droid_accel_disable(u->accel);
+    }
+    if (in_voice_call(u)) {
+        switch (u->accel ? u->accel->o : OrientationUnknown) {
+            case OrientationUnknown:
+                pa_droid_cover_ui_set_state(u->cover_ui, CoverUiSeeking);
+                break;
+            case OrientationLeftUp:
+                pa_droid_cover_ui_set_state(u->cover_ui, u->voice_call_fixed ? CoverUiFixedLeftUp : CoverUiSeekingLeftUp);
+                break;
+            case OrientationRightUp:
+                pa_droid_cover_ui_set_state(u->cover_ui, u->voice_call_fixed ? CoverUiFixedRightUp : CoverUiSeekingRightUp);
+                break;
+        }
+        if (u->voice_call_active) {
+            pa_droid_cover_ui_in_call_active_up(u->cover_ui, true);
+        }
+        if (u->voice_call_rightup_active) {
+            pa_droid_cover_ui_in_call_active_up(u->cover_ui, false);
+        }
+    } else {
+        pa_droid_cover_ui_set_state(u->cover_ui, CoverUiOff);
+    }
 }
 
 static void park_profile(pa_droid_profile *dp) {
@@ -431,7 +611,8 @@ static void park_profile(pa_droid_profile *dp) {
     };
 }
 
-static bool voicecall_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling) {
+static bool voicecall_earpiece_x_up_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling, calls_orientation orientation, const char*name)
+{
     pa_card_profile *cp = NULL;
     pa_droid_mapping *am_output;
 
@@ -444,26 +625,51 @@ static bool voicecall_profile_event_cb(struct userdata *u, pa_droid_profile *p, 
         return false;
     }
 
-    if (pa_droid_idxset_mapping_with_device(u->old_profile->input_mappings,
-                                            AUDIO_DEVICE_IN_VOICE_CALL))
-        cp = pa_hashmap_get(u->card->profiles, VOICE_RECORD_PROFILE_NAME);
+    if (pa_droid_idxset_mapping_with_device(u->old_profile->input_mappings, AUDIO_DEVICE_IN_VOICE_CALL)) {
+        cp = pa_hashmap_get(u->card->profiles, name);
+    }
 
-    /* call mode specialities */
     if (enabling) {
         pa_droid_sink_set_voice_control(am_output->sink, true);
         if (cp && cp->available == PA_AVAILABLE_NO) {
-            pa_log_debug("Enable " VOICE_RECORD_PROFILE_NAME " profile.");
+            pa_log_debug("Enable %s profile.", name);
             pa_card_profile_set_available(cp, PA_AVAILABLE_YES);
         }
     } else {
         pa_droid_sink_set_voice_control(am_output->sink, false);
         if (cp && cp->available == PA_AVAILABLE_YES) {
-            pa_log_debug("Disable " VOICE_RECORD_PROFILE_NAME " profile.");
+            pa_log_debug("Disable %s profile.", name);
             pa_card_profile_set_available(cp, PA_AVAILABLE_NO);
         }
     }
+    if (enabling) {
+        update_audio_routing(u);
+    }
+    update_cover_ui(u);
 
     return true;
+}
+
+static bool voicecall_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling) {
+    pa_log_debug("voicecall_profile_event_cb %d", enabling);
+    u->voice_call_active = enabling;
+    if (enabling) {
+        set_mic_switch(u, p, 1);
+        set_earpiece_select(u, 0);
+        u->voice_call_rightup_active = false;
+    }
+    return voicecall_earpiece_x_up_profile_event_cb(u, p, enabling, OrientationUnknown, VOICE_RECORD_PROFILE_NAME);
+}
+
+static bool voicecall_earpiece_right_up_profile_event_cb(struct userdata *u, pa_droid_profile *p, bool enabling) {
+    pa_log_debug("voicecall_earpiece_right_up_profile_event_cb %d", enabling);
+    u->voice_call_rightup_active = enabling;
+    if (enabling) {
+        set_mic_switch(u, p, 0);
+        set_earpiece_select(u, 1);
+        u->voice_call_active = false;
+    }
+    return voicecall_earpiece_x_up_profile_event_cb(u, p, enabling, OrientationRightUp, VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_NAME);
 }
 
 #ifdef DROID_AUDIO_HAL_USE_VSID
@@ -691,7 +897,8 @@ int pa__init(pa_module *m) {
     pa_droid_config_audio *config = NULL;
     const char *module_id;
     bool namereg_fail = false;
-    pa_card_profile *virtual;
+    pa_card_profile *virtual_voicecall;
+    pa_card_profile *virtual_voicecall_rightup;
     bool default_profile = true;
     bool merge_inputs = true;
     const char *quirks;
@@ -770,19 +977,27 @@ int pa__init(pa_module *m) {
         goto fail;
     }
 
-    virtual =
+    virtual_voicecall =
     add_virtual_profile(u, VOICE_CALL_PROFILE_NAME, VOICE_CALL_PROFILE_DESC,
                         AUDIO_MODE_IN_CALL, voicecall_profile_event_cb,
                         PA_AVAILABLE_YES, NULL, data.profiles);
     add_virtual_profile(u, VOICE_RECORD_PROFILE_NAME, VOICE_RECORD_PROFILE_DESC,
                         AUDIO_MODE_IN_CALL, NULL,
-                        PA_AVAILABLE_NO, virtual, data.profiles);
+                        PA_AVAILABLE_NO, virtual_voicecall, data.profiles);
     add_virtual_profile(u, COMMUNICATION_PROFILE_NAME, COMMUNICATION_PROFILE_DESC,
                         AUDIO_MODE_IN_COMMUNICATION, NULL,
                         PA_AVAILABLE_YES, NULL, data.profiles);
     add_virtual_profile(u, RINGTONE_PROFILE_NAME, RINGTONE_PROFILE_DESC,
                         AUDIO_MODE_RINGTONE, NULL,
                         PA_AVAILABLE_YES, NULL, data.profiles);
+    virtual_voicecall_rightup =
+    add_virtual_profile(u, VOICE_EARPIECE_RIGHT_UP_PROFILE_NAME, VOICE_EARPIECE_RIGHT_UP_PROFILE_DESC,
+                        AUDIO_MODE_IN_CALL, voicecall_earpiece_right_up_profile_event_cb,
+                        PA_AVAILABLE_YES, NULL, data.profiles);
+    add_virtual_profile(u, VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_NAME, VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_DESC,
+                        AUDIO_MODE_IN_CALL, NULL,
+                        PA_AVAILABLE_NO, virtual_voicecall_rightup, data.profiles);
+
 #ifdef DROID_AUDIO_HAL_USE_VSID
     add_virtual_profile(u, VOICE_SESSION_VOICE1_PROFILE_NAME, VOICE_SESSION_VOICE1_PROFILE_DESC,
                         AUDIO_MODE_IN_CALL, voicecall_voice1_vsid_profile_event_cb,
@@ -827,7 +1042,11 @@ int pa__init(pa_module *m) {
 
 #ifdef HAVE_UDEV
     u->extcon = pa_droid_extcon_new(m->core, u->card);
+    pa_droid_extcon_set_cb(u->extcon, extcon_update_state, u);
 #endif
+    u->accel = pa_droid_accel_new();
+    u->cover_ui = pa_droid_cover_ui_new(m->core);
+    u->earpiece_select = pa_droid_earpiece_select_new(m->core);
 
     return 0;
 
@@ -857,6 +1076,22 @@ void pa__done(pa_module *m) {
         if (u->extcon)
             pa_droid_extcon_free(u->extcon);
 #endif
+
+        if (u->voice_call_fixed_event) {
+            u->core->mainloop->time_free(u->voice_call_fixed_event);
+        }
+
+        if (u->cover_ui) {
+            pa_droid_cover_ui_free(u->cover_ui);
+        }
+
+        if (u->earpiece_select) {
+            pa_droid_earpiece_select_free(u->earpiece_select);
+        }
+
+        if (u->accel) {
+            pa_droid_accel_free(u->accel);
+        }
 
         if (u->card)
             pa_card_free(u->card);
