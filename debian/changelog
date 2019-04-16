@@ -5,6 +5,56 @@ pulseaudio (12.2+gemian) buster; urgency=medium
 
  -- Adam Boardman <adamboardman@gmail.com>  Tue, 4 Sep 2018 10:12:48 +0100
 
+pulseaudio (12.2-4) unstable; urgency=medium
+
+  [ Jan Graichen ]
+  * Load correct profile for Arctis 7 and Arctis Pro headsets.
+    (Closes: #918067)
+
+ -- Felipe Sateler <fsateler@debian.org>  Thu, 14 Feb 2019 20:05:41 -0300
+
+pulseaudio (12.2-3) unstable; urgency=medium
+
+  [ Joseph Herlant ]
+  * d/changelog & d/control: Remove trailing whitespaces
+
+  [ Felipe Sateler ]
+  * Backport upstream patches for better Arctis headset support
+    (Closes: #918067)
+  * Ship link from /etc/alsa/conf.d/pulse.conf to /usr/share/alsa/alsa.conf.d/pulse.conf.
+    Upstream alsa decided to stop supporting the /usr path (Closes: #915696)
+  * Don't compile with -ffast-math.
+    This flag results in calls to (at least) isfinite() and isnan() becoming
+    skipped, and a constant false returned. (Closes: #916504)
+
+ -- Felipe Sateler <fsateler@debian.org>  Tue, 15 Jan 2019 21:58:48 -0300
+
+pulseaudio (12.2-2) unstable; urgency=medium
+
+  [ Joseph Herlant ]
+  * Allow rounding without having to allow a random number of errors in
+    tests/volume-test.c (Closes: #906504)
+
+  [ Felipe Sateler ]
+  * Bump debhelper compat level to 11.
+    Also switch to the new debhelper-compat virtual package
+  * Bump Standards-Version
+
+ -- Felipe Sateler <fsateler@debian.org>  Fri, 14 Sep 2018 20:16:14 -0300
+
+pulseaudio (12.2-1) unstable; urgency=medium
+
+  [ Felipe Sateler ]
+  * New upstream version 12.2
+  * Do not build esound compatibility anymore.
+    Esound will not be part of buster, so no need to have the compat code built.
+    (Closes: #561780)
+
+  [ Joseph Herlant ]
+  * Add patch to allow a higher deviation for volume-test.c (Closes: #906504)
+
+ -- Felipe Sateler <fsateler@debian.org>  Thu, 06 Sep 2018 10:46:33 -0300
+
 pulseaudio (12.0-1) unstable; urgency=medium
 
   * New upstream version 12.0
