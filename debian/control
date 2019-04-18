@@ -12,6 +12,7 @@ Build-Depends: debhelper-compat (= 11),
     intltool,
     libasound2-dev [linux-any],
     libasyncns-dev,
+    libatomic-ops-dev,
     libavahi-client-dev,
     libbluetooth-dev [linux-any] <!stage1>,
     libsbc-dev [linux-any],
@@ -40,6 +41,7 @@ Build-Depends: debhelper-compat (= 11),
     libxcb1-dev,
     libxtst-dev,
     android-headers,
+    libubuntu-application-api-dev,
     libhybris-dev
 Standards-Version: 4.2.1
 Rules-Requires-Root: no

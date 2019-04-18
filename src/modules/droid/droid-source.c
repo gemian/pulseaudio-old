@@ -133,6 +133,7 @@ static bool parse_device_list(const char *str, audio_devices_t *dst) {
             pa_xfree(dev);
             return false;
         }
+        pa_log_debug("parse_device_list %s, %s", str, dev);
 
         *dst |= d;
 
@@ -517,6 +518,8 @@ pa_source *pa_droid_source_new(pa_module *m,
     pa_assert(ma);
     pa_assert(driver);
 
+    pa_log("pa_droid_source_new");
+
     /* When running under card use hw module name for source by default. */
     if (am)
         module_id = am->input->module->name;
@@ -585,12 +588,16 @@ pa_source *pa_droid_source_new(pa_module *m,
         /* Stand-alone source */
 
         if (!(u->hw_module = pa_droid_hw_module_get(u->core, NULL, module_id))) {
-            if (!(config = pa_droid_config_load(ma)))
+            if (!(config = pa_droid_config_load(ma))) {
+                pa_log("Failed to load droid config for module.");
                 goto fail;
+            }
 
             /* Ownership of config transfers to hw_module if opening of hw module succeeds. */
-            if (!(u->hw_module = pa_droid_hw_module_get(u->core, config, module_id)))
+            if (!(u->hw_module = pa_droid_hw_module_get(u->core, config, module_id))) {
+                pa_log("Failed to get hw module with config.");
                 goto fail;
+            }
         }
     }
 
@@ -613,6 +620,8 @@ pa_source *pa_droid_source_new(pa_module *m,
             pa_log_debug("Set initial devices %s", tmp);
         }
     }
+
+    pa_log("pa_droid_source_new - about to open input stream");
 
     if (am)
         u->stream = pa_droid_open_input_stream(u->hw_module, &sample_spec, &channel_map, dev_in, am);
@@ -706,6 +715,8 @@ pa_source *pa_droid_source_new(pa_module *m,
     return u->source;
 
 fail:
+    pa_log("Failed to create new input source");
+
     pa_xfree(thread_name);
 
     if (config)
@@ -727,6 +738,7 @@ void pa_droid_source_free(pa_source *s) {
 }
 
 static void userdata_free(struct userdata *u) {
+    pa_log("userdata_free");
     pa_assert(u);
 
     if (u->input_channel_map_changed_slot)

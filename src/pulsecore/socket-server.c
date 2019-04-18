@@ -210,7 +210,7 @@ pa_socket_server* pa_socket_server_new_unix(pa_mainloop_api *m, const char *file
         pa_make_socket_low_delay(fd);
 
         if (bind(fd, (struct sockaddr*) &sa, (socklen_t) SUN_LEN(&sa)) < 0) {
-            pa_log("bind(): %s", pa_cstrerror(errno));
+            pa_log("bind(3): %s", pa_cstrerror(errno));
             goto fail;
         }
 
@@ -299,11 +299,11 @@ pa_socket_server* pa_socket_server_new_ipv4(pa_mainloop_api *m, uint32_t address
                 sa.sin_port = 0;
 
                 if (bind(fd, (struct sockaddr *) &sa, sizeof(sa)) < 0) {
-                    pa_log("bind(): %s", pa_cstrerror(errno));
+                    pa_log("bind(4): %s", pa_cstrerror(errno));
                     goto fail;
                 }
             } else {
-                pa_log("bind(): %s", pa_cstrerror(errno));
+                pa_log("bind(5): %s", pa_cstrerror(errno));
                 goto fail;
             }
         }
@@ -387,11 +387,11 @@ pa_socket_server* pa_socket_server_new_ipv6(pa_mainloop_api *m, const uint8_t ad
                 sa.sin6_port = 0;
 
                 if (bind(fd, (struct sockaddr *) &sa, sizeof(sa)) < 0) {
-                    pa_log("bind(): %s", pa_cstrerror(errno));
+                    pa_log("bind(6): %s", pa_cstrerror(errno));
                     goto fail;
                 }
             } else {
-                pa_log("bind(): %s", pa_cstrerror(errno));
+                pa_log("bind(7): %s", pa_cstrerror(errno));
                 goto fail;
             }
         }

@@ -32,6 +32,7 @@ load-module module-augment-properties
 
 load-module module-null-sink sink_name=sink.null rate=48000
 
+load-module module-stream-restore
 
 ### Switch when connected by default (ubports)
 load-module module-switch-on-connect ignore_virtual=yes
@@ -134,3 +135,17 @@ load-module module-dbus-protocol
 ### interrupted. Policy enforcement module then moves the streams to new appropriate
 ### sinks or sources.
 #load-module module-rescue-streams sink_name=sink.null source_name=sink.null.monitor
+
+### Enable positioned event sounds
+load-module module-position-event-sounds
+
+### Modules to allow auto-loading of filters (such as echo cancellation)
+### on demand. module-filter-heuristics tries to determine what filters
+### make sense, and module-filter-apply does the heavy-lifting of
+### loading modules and rerouting streams.
+load-module module-filter-heuristics
+load-module module-filter-apply
+
+### Make some devices default
+set-default-sink sink.primary
+set-default-source source.primary
