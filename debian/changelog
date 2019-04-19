@@ -1,6 +1,6 @@
-pulseaudio (10.0+gemian2) stretch; urgency=medium
+pulseaudio (12.2+gemian) buster; urgency=medium
 
-  * Added extcon for headset detection
+  * Updated version to overwrite buster version with older stretch version
 
  -- Adam Boardman <adamboardman@gmail.com>  Sun, 2 Dec 2018 21:58:48 +0000
 
