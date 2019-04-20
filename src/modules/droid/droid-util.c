@@ -2452,8 +2452,11 @@ pa_droid_stream *pa_droid_open_input_stream(pa_droid_hw_module *module,
     if (!s->input->merged && !pa_droid_quirk(module, QUIRK_CLOSE_INPUT))
         input_stream_set_route(s, devices);
 
-    /* We start the stream in suspended state. */
-    pa_droid_stream_suspend(s, true);
+    /* We used to start the stream in suspended state.
+       Upstream changes mean that we never resume the stream if newly created
+       So for now trying without the suspend on start.
+    */
+    //pa_droid_stream_suspend(s, true);
 
     return s;
 
@@ -2720,6 +2723,8 @@ int pa_droid_stream_suspend(pa_droid_stream *s, bool suspend) {
     pa_assert(s);
     pa_assert(s->output || s->input);
 
+    pa_log_debug("pa_droid_stream_suspend %d, %d", s->output, suspend);
+
     if (s->output) {
         if (suspend) {
             pa_atomic_dec(&s->module->active_outputs);
@@ -2732,12 +2737,15 @@ int pa_droid_stream_suspend(pa_droid_stream *s, bool suspend) {
             if (s->input->stream) {
                 if (s->input->merged || pa_droid_quirk(s->module, QUIRK_CLOSE_INPUT)) {
                     s->input->stream->common.standby(&s->input->stream->common);
+                    pa_log_debug("close input stream");
                     input_stream_close(s);
                 } else
                     return s->input->stream->common.standby(&s->input->stream->common);
             }
-        } else if (s->input->merged || pa_droid_quirk(s->module, QUIRK_CLOSE_INPUT))
+        } else if (s->input->merged || pa_droid_quirk(s->module, QUIRK_CLOSE_INPUT)) {
+            pa_log_debug("open input stream");
             return input_stream_open(s);
+        }
     }
 
     return 0;
