@@ -379,8 +379,9 @@ static void update_preferred_input_port(pa_card *card, pa_card_profile *old_prof
 
     /* If the profile change didn't affect input, it doesn't indicate change in
      * the user's input port preference. */
-    if (pa_safe_streq(old_profile->input_name, new_profile->input_name))
+    if (old_profile != NULL && pa_safe_streq(old_profile->input_name, new_profile->input_name)) {
         return;
+    }
 
     /* If there are more than one source, we don't know which of those the user
      * prefers. If there are no sources, then the user doesn't seem to care
@@ -415,8 +416,9 @@ static void update_preferred_output_port(pa_card *card, pa_card_profile *old_pro
 
     /* If the profile change didn't affect output, it doesn't indicate change in
      * the user's output port preference. */
-    if (pa_safe_streq(old_profile->output_name, new_profile->output_name))
+    if (old_profile != NULL && pa_safe_streq(old_profile->output_name, new_profile->output_name)) {
         return;
+    }
 
     /* If there are more than one sink, we don't know which of those the user
      * prefers. If there are no sinks, then the user doesn't seem to care about
