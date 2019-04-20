@@ -89,7 +89,7 @@ enum {
 
 #define DROID_AUDIO_SOURCE "droid.audio_source"
 #define DROID_AUDIO_SOURCE_UNDEFINED "undefined"
-#define PULSEAUDIO_VERSION 8
+#define PULSEAUDIO_VERSION 12
 
 static void userdata_free(struct userdata *u);
 

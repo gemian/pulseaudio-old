@@ -112,5 +112,9 @@ void pa_droid_accel_free(pa_droid_accel *u) {
 
     pa_assert(u);
 
+    if (u->accelerometer) {
+        pa_xfree(u->accelerometer);
+    }
+
     pa_xfree(u);
 }
