@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2013 Jolla Ltd.
+ * Copyright (C) 2013-2018 Jolla Ltd.
  *
- * Contact: Juho Hämäläinen <juho.hamalainen@tieto.com>
+ * Contact: Juho Hämäläinen <juho.hamalainen@jolla.com>
  *
  * These PulseAudio Modules are free software; you can redistribute
  * it and/or modify it under the terms of the GNU Lesser General Public
@@ -135,6 +135,8 @@ static const char* const valid_modargs[] = {
 #define RINGTONE_PROFILE_DESC       "Ringtone mode"
 #define COMMUNICATION_PROFILE_NAME  "communication"
 #define COMMUNICATION_PROFILE_DESC  "Communication mode"
+#define VENDOR_EXT_REALCALL_ON      "realcall=on"
+#define VENDOR_EXT_REALCALL_OFF     "realcall=off"
 #define VOICE_EARPIECE_RIGHT_UP_PROFILE_NAME "voicecall-rightup"
 #define VOICE_EARPIECE_RIGHT_UP_PROFILE_DESC "Call mode (RightUp)"
 #define VOICE_EARPIECE_RIGHT_UP_RECORD_PROFILE_NAME   "voicecall-record-rightup"
@@ -387,6 +389,8 @@ static void init_profile(struct userdata *u) {
 
     pa_log_debug("Init profile.");
 
+    pa_assert(u->card->active_profile);
+
     d = PA_CARD_PROFILE_DATA(u->card->active_profile);
 
     if (d->profile && pa_idxset_size(d->profile->output_mappings) > 0) {
@@ -635,12 +639,18 @@ static bool voicecall_earpiece_x_up_profile_event_cb(struct userdata *u, pa_droi
             pa_log_debug("Enable %s profile.", name);
             pa_card_profile_set_available(cp, PA_AVAILABLE_YES);
         }
+        if (pa_droid_quirk(u->hw_module, QUIRK_REALCALL)) {
+            pa_droid_set_parameters(u->hw_module, VENDOR_EXT_REALCALL_ON);
+		}
     } else {
         pa_droid_sink_set_voice_control(am_output->sink, false);
         if (cp && cp->available == PA_AVAILABLE_YES) {
             pa_log_debug("Disable %s profile.", name);
             pa_card_profile_set_available(cp, PA_AVAILABLE_NO);
         }
+        if (pa_droid_quirk(u->hw_module, QUIRK_REALCALL)) {
+            pa_droid_set_parameters(u->hw_module, VENDOR_EXT_REALCALL_OFF);
+		}
     }
     if (enabling) {
         update_audio_routing(u);
@@ -924,14 +934,21 @@ int pa__init(pa_module *m) {
     u->core = m->core;
     m->userdata = u;
 
-    if (!(config = pa_droid_config_load(ma)))
-        goto fail;
-
     module_id = pa_modargs_get_value(ma, "module_id", DEFAULT_MODULE_ID);
 
-    /* Ownership of config transfers to hw_module if opening of hw module succeeds. */
-    if (!(u->hw_module = pa_droid_hw_module_get(u->core, config, module_id)))
-        goto fail;
+    /* First let's find out if hw module has already been opened, or if we need to
+     * do it ourself. */
+    if (!(u->hw_module = pa_droid_hw_module_get(u->core, NULL, module_id))) {
+        /* No hw module object in shared object db, let's open the module now. */
+        if (!(config = pa_droid_config_load(ma)))
+            goto fail;
+
+        if (!(u->hw_module = pa_droid_hw_module_get(u->core, config, module_id)))
+            goto fail;
+
+        pa_droid_config_free(config);
+        config = NULL;
+    }
 
     if ((quirks = pa_modargs_get_value(ma, "quirks", NULL))) {
         if (!pa_droid_quirk_parse(u->hw_module, quirks)) {
@@ -1032,13 +1049,17 @@ int pa__init(pa_module *m) {
     u->card->userdata = u;
     u->card->set_profile = card_set_profile;
 
-    pa_card_put(u->card);
-    pa_card_choose_initial_profile(u->card);
-
     u->modargs = ma;
     u->module = m;
 
+#if (PULSEAUDIO_VERSION >= 10)
+    pa_card_choose_initial_profile(u->card);
+#endif
     init_profile(u);
+	
+#if (PULSEAUDIO_VERSION >= 10)
+    pa_card_put(u->card);
+#endif
 
 #ifdef HAVE_UDEV
     u->extcon = pa_droid_extcon_new(m->core, u->card);
@@ -1051,6 +1072,8 @@ int pa__init(pa_module *m) {
     return 0;
 
 fail:
+    pa_droid_config_free(config);
+
     if (ma)
         pa_modargs_free(ma);
 

@@ -39,6 +39,7 @@
 
 #include "droid-util.h"
 #include "droid-sink.h"
+#include "conversion.h"
 
 PA_MODULE_AUTHOR("Juho Hämäläinen");
 PA_MODULE_DESCRIPTION("Droid sink");

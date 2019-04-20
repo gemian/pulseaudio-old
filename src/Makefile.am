@@ -1980,15 +1980,20 @@ libdroid_util_la_LDFLAGS = -avoid-version
 libdroid_util_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS)
 libdroid_util_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS)
 
+libdroid_util_la_SOURCES += modules/droid/config-parser-legacy.c
+libdroid_util_la_SOURCES += modules/droid/config-parser-xml.c
+libdroid_util_la_SOURCES += modules/droid/conversion.c
+libdroid_util_la_SOURCES += modules/droid/droid-config.c
+
 libdroid_sink_la_SOURCES = modules/droid/droid-sink.c modules/droid/droid-sink.h
 libdroid_sink_la_LDFLAGS = -avoid-version
 libdroid_sink_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la
-libdroid_sink_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS)
+libdroid_sink_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS) -DPULSEAUDIO_VERSION=@PA_MAJOR@
 
 libdroid_source_la_SOURCES = modules/droid/droid-source.c modules/droid/droid-source.h
 libdroid_source_la_LDFLAGS = -avoid-version
 libdroid_source_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la
-libdroid_source_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS)
+libdroid_source_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS) -DPULSEAUDIO_VERSION=@PA_MAJOR@
 
 module_droid_keepalive_la_SOURCES = modules/droid/keepalive.c modules/droid/keepalive.h modules/droid/module-droid-keepalive.c
 module_droid_keepalive_la_LDFLAGS = $(MODULE_LDFLAGS)
@@ -2008,7 +2013,7 @@ module_droid_source_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS) -DPA_MODU
 module_droid_card_la_SOURCES = modules/droid/module-droid-card.c
 module_droid_card_la_LDFLAGS = $(MODULE_LDFLAGS)
 module_droid_card_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la libdroid-sink.la libdroid-source.la
-module_droid_card_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS) -DPA_MODULE_NAME=module_droid_card
+module_droid_card_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS) -DPA_MODULE_NAME=module_droid_card -DPULSEAUDIO_VERSION=@PA_MAJOR@
 
 if HAVE_UDEV
 module_droid_card_la_SOURCES += modules/droid/droid-extcon.c
@@ -2032,7 +2037,7 @@ module_droid_card_la_CFLAGS += $(DBUS_CFLAGS)
 module_droid_glue_la_SOURCES = modules/droid/audioflingerglue-hybris.c modules/droid/module-droid-glue.c
 module_droid_glue_la_LDFLAGS = $(MODULE_LDFLAGS) -lm -lhybris-common
 module_droid_glue_la_LIBADD = $(MODULE_LIBADD) $(LIBHARDWARE_LIBS) libdroid-util.la
-module_droid_glue_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS) $(LIB_AF_CFLAGS) -I/usr/include/audioflingerglue  -DPA_MODULE_NAME=module_droid_glue
+module_droid_glue_la_CFLAGS = $(AM_CFLAGS) $(ANDROID_HEADERS_CFLAGS) $(LIB_AF_CFLAGS)
 endif # HAVE_ANDROID
 
 # Solaris

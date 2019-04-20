@@ -43,8 +43,13 @@ HACKING:
 	  echo autospawn = no >> ~/.config/pulse/client.conf
 
 	Debug
+	  export LD_LIBRARY_PATH="/home/adam/source/pulseaudio/src/.libs:/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH"
 	  gdb src/.libs/pulseaudio
 	  run -n -F /home/adam/source/pulseaudio/src/default.pa -p /home/adam/source/pulseaudio/src/ -vvvv
+
+    Valgrind
+       export LD_LIBRARY_PATH="/home/adam/source/pulseaudio/src/.libs:/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH"
+       valgrind ./src/.libs/pulseaudio -n -F src/default.pa -p $(pwd)/src/ -vvvv
 
 SPELLING:
         PulseAudio

@@ -108,7 +108,7 @@ install-data-yes: all
 	linguas="$(USE_LINGUAS)"; \
 	for lang in $$linguas; do \
 	  dir=$(DESTDIR)$(localedir)/$$lang/LC_MESSAGES; \
-	  $(mkdir_p) $$dir; \
+	  $(MKDIR_P) $$dir; \
 	  if test -r $$lang.gmo; then \
 	    $(INSTALL_DATA) $$lang.gmo $$dir/$(GETTEXT_PACKAGE).mo; \
 	    echo "installing $$lang.gmo as $$dir/$(GETTEXT_PACKAGE).mo"; \

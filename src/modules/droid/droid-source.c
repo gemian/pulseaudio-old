@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2013 Jolla Ltd.
+ * Copyright (C) 2013-2018 Jolla Ltd.
  *
- * Contact: Juho Hämäläinen <juho.hamalainen@tieto.com>
+ * Contact: Juho Hämäläinen <juho.hamalainen@jolla.com>
  *
  * These PulseAudio Modules are free software; you can redistribute
  * it and/or modify it under the terms of the GNU Lesser General Public
@@ -54,6 +54,7 @@
 
 #include "droid-source.h"
 #include "droid-util.h"
+#include "conversion.h"
 
 struct userdata {
     pa_core *core;
@@ -79,6 +80,7 @@ struct userdata {
     pa_droid_card_data *card_data;
     pa_droid_hw_module *hw_module;
     pa_droid_stream *stream;
+    bool stream_valid;
 };
 
 enum {
@@ -89,9 +91,10 @@ enum {
 
 #define DROID_AUDIO_SOURCE "droid.audio_source"
 #define DROID_AUDIO_SOURCE_UNDEFINED "undefined"
-#define PULSEAUDIO_VERSION 8
 
 static void userdata_free(struct userdata *u);
+static int suspend(struct userdata *u);
+static void unsuspend(struct userdata *u);
 
 static int do_routing(struct userdata *u, audio_devices_t devices) {
     int ret;
@@ -117,11 +120,11 @@ static int do_routing(struct userdata *u, audio_devices_t devices) {
 }
 
 static bool parse_device_list(const char *str, audio_devices_t *dst) {
-    pa_assert(str);
-    pa_assert(dst);
-
     char *dev;
     const char *state = NULL;
+
+    pa_assert(str);
+    pa_assert(dst);
 
     *dst = 0;
 
@@ -148,20 +151,33 @@ static int thread_read(struct userdata *u) {
     ssize_t readd;
     pa_memchunk chunk;
 
+    chunk.index = 0;
     chunk.memblock = pa_memblock_new(u->core->mempool, (size_t) u->buffer_size);
+
+    if (!u->stream_valid) {
+        /* try to resume or post silence */
+        unsuspend(u);
+        if (!u->stream_valid) {
+            p = pa_memblock_acquire(chunk.memblock);
+            chunk.length = pa_memblock_get_length(chunk.memblock);
+            memset(p, 0, chunk.length);
+            pa_source_post(u->source, &chunk);
+            pa_memblock_release(chunk.memblock);
+            goto end;
+        }
+    }
 
     p = pa_memblock_acquire(chunk.memblock);
     readd = pa_droid_stream_read(u->stream, p, pa_memblock_get_length(chunk.memblock));
     pa_memblock_release(chunk.memblock);
 
     if (readd < 0) {
-        pa_log("Failed to read from stream. (err %i)", readd);
+        pa_log("Failed to read from stream. (err %li)", readd);
         goto end;
     }
 
     u->timestamp += pa_bytes_to_usec(readd, &u->source->sample_spec);
 
-    chunk.index = 0;
     chunk.length = readd;
 
     if (u->resampler) {
@@ -254,8 +270,56 @@ static void unsuspend(struct userdata *u) {
     pa_assert(u);
     pa_assert(u->stream);
 
-    pa_droid_stream_suspend(u->stream, false);
-    pa_log_info("Resuming...");
+    if (pa_droid_stream_suspend(u->stream, false) >= 0) {
+        u->stream_valid = true;
+        pa_log_info("Resuming...");
+    } else
+        u->stream_valid = false;
+}
+
+/* Called from IO context */
+static int source_set_state_in_io_thread_cb(pa_source *s, pa_source_state_t new_state, pa_suspend_cause_t new_suspend_cause) {
+    struct userdata *u;
+    int r;
+
+    pa_assert(s);
+    pa_assert_se(u = s->userdata);
+
+    /* It may be that only the suspend cause is changing, in which case there's
+     * nothing more to do. */
+    if (new_state == s->thread_info.state)
+        return 0;
+
+    switch (new_state) {
+        case PA_SOURCE_SUSPENDED:
+            if (PA_SOURCE_IS_OPENED(u->source->thread_info.state)) {
+                if ((r = suspend(u)) < 0)
+                    return r;
+            }
+
+            break;
+
+        case PA_SOURCE_IDLE:
+            /* Fall through */
+        case PA_SOURCE_RUNNING:
+            if (u->source->thread_info.state == PA_SOURCE_SUSPENDED) {
+                unsuspend(u);
+                u->timestamp = pa_rtclock_now();
+            }
+            break;
+
+        case PA_SOURCE_UNLINKED:
+            /* Suspending since some implementations do not want to free running stream. */
+            suspend(u);
+            break;
+
+        /* not needed */
+        case PA_SOURCE_INIT:
+        case PA_SOURCE_INVALID_STATE:
+            break;
+    }
+
+    return 0;
 }
 
 /* Called from IO context */
@@ -268,48 +332,19 @@ static int source_process_msg(pa_msgobject *o, int code, void *data, int64_t off
 
             pa_assert(PA_SOURCE_IS_OPENED(u->source->thread_info.state));
 
-            pa_droid_stream_suspend(u->stream, true);
+            suspend(u);
             do_routing(u, device);
-            pa_droid_stream_suspend(u->stream, false);
+            unsuspend(u);
             break;
         }
 
+#if PULSEAUDIO_VERSION < 12
         case PA_SOURCE_MESSAGE_SET_STATE: {
-            switch ((pa_source_state_t) PA_PTR_TO_UINT(data)) {
-                case PA_SOURCE_SUSPENDED: {
-                    int r;
-
-                    if (PA_SOURCE_IS_OPENED(u->source->thread_info.state)) {
-                        if ((r = suspend(u)) < 0)
-                            return r;
-                    }
-
-                    break;
-                }
-
-                case PA_SOURCE_IDLE:
-                    /* Fall through */
-                case PA_SOURCE_RUNNING: {
-                    if (u->source->thread_info.state == PA_SOURCE_SUSPENDED) {
-                        unsuspend(u);
-                        u->timestamp = pa_rtclock_now();
-                    }
-                    break;
-                }
-
-                case PA_SOURCE_UNLINKED: {
-                    /* Suspending since some implementations do not want to free running stream. */
-                    suspend(u);
-                    break;
-                }
-
-                /* not needed */
-                case PA_SOURCE_INIT:
-                case PA_SOURCE_INVALID_STATE:
-                    ;
-            }
-            break;
+            int r;
+            if ((r = source_set_state_in_io_thread_cb(u->source, PA_PTR_TO_UINT(data), 0)) < 0)
+                return r;
         }
+#endif
     }
 
     return pa_source_process_msg(o, code, data, offset, chunk);
@@ -435,9 +470,9 @@ static void update_latency(struct userdata *u) {
 
     if (u->source_buffer_size) {
         u->buffer_size = pa_droid_buffer_size_round_up(u->source_buffer_size, u->buffer_size);
-        pa_log_info("Using buffer size %u (requested %u).", u->buffer_size, u->source_buffer_size);
+        pa_log_info("Using buffer size %lu (requested %lu).", u->buffer_size, u->source_buffer_size);
     } else
-        pa_log_info("Using buffer size %u.", u->buffer_size);
+        pa_log_info("Using buffer size %lu.", u->buffer_size);
 
     if (pa_thread_mq_get())
         pa_source_set_fixed_latency_within_thread(u->source, pa_bytes_to_usec(u->buffer_size, &u->stream->input->sample_spec));
@@ -574,6 +609,7 @@ pa_source *pa_droid_source_new(pa_module *m,
     }
 
     u = pa_xnew0(struct userdata, 1);
+    u->stream_valid = true;
     u->core = m->core;
     u->module = m;
     u->card = card;
@@ -585,19 +621,20 @@ pa_source *pa_droid_source_new(pa_module *m,
         u->card_data = card_data;
         pa_assert_se((u->hw_module = pa_droid_hw_module_get(u->core, NULL, card_data->module_id)));
     } else {
-        /* Stand-alone source */
-
+        /* Source wasn't created from inside card module, so we'll need to open
+         * hw module ourself.
+         *
+         * First let's find out if hw module has already been opened, or if we need to
+         * do it ourself. */
         if (!(u->hw_module = pa_droid_hw_module_get(u->core, NULL, module_id))) {
-            if (!(config = pa_droid_config_load(ma))) {
-                pa_log("Failed to load droid config for module.");
+            if (!(config = pa_droid_config_load(ma)))
                 goto fail;
-            }
 
-            /* Ownership of config transfers to hw_module if opening of hw module succeeds. */
-            if (!(u->hw_module = pa_droid_hw_module_get(u->core, config, module_id))) {
-                pa_log("Failed to get hw module with config.");
+            if (!(u->hw_module = pa_droid_hw_module_get(u->core, config, module_id)))
                 goto fail;
-            }
+
+            pa_droid_config_free(config);
+            config = NULL;
         }
     }
 
@@ -677,6 +714,9 @@ pa_source *pa_droid_source_new(pa_module *m,
     u->source->userdata = u;
 
     u->source->parent.process_msg = source_process_msg;
+#if PULSEAUDIO_VERSION >= 12
+    u->source->set_state_in_io_thread = source_set_state_in_io_thread_cb;
+#endif
 
     source_set_mute_control(u);
 
@@ -716,11 +756,8 @@ pa_source *pa_droid_source_new(pa_module *m,
 
 fail:
     pa_log("Failed to create new input source");
-
+    pa_droid_config_free(config);
     pa_xfree(thread_name);
-
-    if (config)
-        pa_xfree(config);
 
     if (u)
         userdata_free(u);

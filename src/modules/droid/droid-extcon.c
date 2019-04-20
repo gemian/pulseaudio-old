@@ -88,7 +88,7 @@ static struct droid_switch *droid_switch_new(const char *name) {
         return NULL;
     }
     pa_log_debug("Switch '%s' opened with value '%s'", name, state);
-
+    pa_xfree(state);
     return as;
 }
 

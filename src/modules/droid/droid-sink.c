@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2013 Jolla Ltd.
+ * Copyright (C) 2013-2018 Jolla Ltd.
  *
- * Contact: Juho Hämäläinen <juho.hamalainen@tieto.com>
+ * Contact: Juho Hämäläinen <juho.hamalainen@jolla.com>
  *
  * These PulseAudio Modules are free software; you can redistribute
  * it and/or modify it under the terms of the GNU Lesser General Public
@@ -57,6 +57,7 @@
 
 #include "droid-sink.h"
 #include "droid-util.h"
+#include "conversion.h"
 
 struct userdata {
     pa_core *core;
@@ -214,11 +215,11 @@ static void do_routing(struct userdata *u) {
 }
 
 static bool parse_device_list(const char *str, audio_devices_t *dst) {
-    pa_assert(str);
-    pa_assert(dst);
-
     char *dev;
     const char *state = NULL;
+
+    pa_assert(str);
+    pa_assert(dst);
 
     *dst = 0;
 
@@ -276,6 +277,9 @@ static int thread_write(struct userdata *u) {
     u->write_time = pa_rtclock_now();
 
     for (;;) {
+        if (pa_droid_quirk(u->hw_module, QUIRK_OUTPUT_MAKE_WRITABLE))
+            pa_memchunk_make_writable(&c, c.length);
+
         p = pa_memblock_acquire_chunk(&c);
         wrote = pa_droid_stream_write(u->stream, p, c.length);
         pa_memblock_release(c.memblock);
@@ -284,7 +288,7 @@ static int thread_write(struct userdata *u) {
             pa_memblockq_drop(u->memblockq, c.length);
             pa_memblock_unref(c.memblock);
             u->write_time = 0;
-            pa_log("failed to write stream (%d)", wrote);
+            pa_log("failed to write stream (%ld)", wrote);
             return -1;
         }
 
@@ -394,7 +398,11 @@ static void thread_func(void *userdata) {
             pa_rtpoll_set_timer_disabled(u->rtpoll);
 
         /* Sleep */
+#if (PULSEAUDIO_VERSION == 5)
+        if ((ret = pa_rtpoll_run(u->rtpoll, true)) < 0)
+#elif (PULSEAUDIO_VERSION >= 6)
         if ((ret = pa_rtpoll_run(u->rtpoll)) < 0)
+#endif
             goto fail;
 
         if (ret == 0)
@@ -434,6 +442,7 @@ static int suspend(struct userdata *u) {
     return ret;
 }
 
+/* Called from IO context */
 static int unsuspend(struct userdata *u) {
     uint32_t i;
 
@@ -458,56 +467,69 @@ static int unsuspend(struct userdata *u) {
 }
 
 /* Called from IO context */
+static int sink_set_state_in_io_thread_cb(pa_sink *s, pa_sink_state_t new_state, pa_suspend_cause_t new_suspend_cause) {
+    struct userdata *u;
+    int r;
+
+    pa_assert(s);
+    pa_assert_se(u = s->userdata);
+
+    /* It may be that only the suspend cause is changing, in which case there's
+     * nothing more to do. */
+    if (new_state == s->thread_info.state)
+        return 0;
+
+    switch (new_state) {
+        case PA_SINK_SUSPENDED:
+            pa_assert(PA_SINK_IS_OPENED(u->sink->thread_info.state));
+
+            if ((r = suspend(u)) < 0)
+                return r;
+
+            break;
+
+        case PA_SINK_IDLE:
+            /* Fall through */
+        case PA_SINK_RUNNING:
+            if (u->sink->thread_info.state == PA_SINK_SUSPENDED) {
+                if ((r = unsuspend(u)) < 0)
+                    return r;
+            }
+
+            pa_rtpoll_set_timer_absolute(u->rtpoll, pa_rtclock_now());
+            break;
+
+        case PA_SINK_UNLINKED:
+            /* Suspending since some implementations do not want to free running stream. */
+            suspend(u);
+            break;
+
+        /* not needed */
+        case PA_SINK_INIT:
+        case PA_SINK_INVALID_STATE:
+            break;
+    }
+
+    return 0;
+}
+
+/* Called from IO context */
 static int sink_process_msg(pa_msgobject *o, int code, void *data, int64_t offset, pa_memchunk *chunk) {
     struct userdata *u = PA_SINK(o)->userdata;
 
     switch (code) {
-
         case PA_SINK_MESSAGE_GET_LATENCY: {
             *((pa_usec_t*) data) = pa_droid_stream_get_latency(u->stream);
             return 0;
         }
 
+#if PULSEAUDIO_VERSION < 12
         case PA_SINK_MESSAGE_SET_STATE: {
-            switch ((pa_sink_state_t) PA_PTR_TO_UINT(data)) {
-                case PA_SINK_SUSPENDED: {
-                    int r;
-
-                    pa_assert(PA_SINK_IS_OPENED(u->sink->thread_info.state));
-
-                    if ((r = suspend(u)) < 0)
-                        return r;
-
-                    break;
-                }
-
-                case PA_SINK_IDLE:
-                    /* Fall through */
-                case PA_SINK_RUNNING: {
-                    int r;
-
-                    if (u->sink->thread_info.state == PA_SINK_SUSPENDED) {
-                        if ((r = unsuspend(u)) < 0)
-                            return r;
-                    }
-
-                    pa_rtpoll_set_timer_absolute(u->rtpoll, pa_rtclock_now());
-                    break;
-                }
-
-                case PA_SINK_UNLINKED: {
-                    /* Suspending since some implementations do not want to free running stream. */
-                    suspend(u);
-                    break;
-                }
-
-                /* not needed */
-                case PA_SINK_INIT:
-                case PA_SINK_INVALID_STATE:
-                    ;
-            }
-            break;
+            int r;
+            if ((r = sink_set_state_in_io_thread_cb(u->sink, PA_PTR_TO_UINT(data), 0)) < 0)
+                return r;
         }
+#endif
     }
 
     return pa_sink_process_msg(o, code, data, offset, chunk);
@@ -997,7 +1019,7 @@ static bool parse_prewrite_on_resume(struct userdata *u, const char *prewrite_re
             goto error;
 
         if (pa_streq(stream, name)) {
-            pa_log_info("Using requested prewrite size for %s: %u (%u * %u).",
+            pa_log_info("Using requested prewrite size for %s: %lu (%u * %lu).",
                         name, u->buffer_size * b, b, u->buffer_size);
             u->prewrite_silence = b;
             pa_xfree(entry);
@@ -1131,18 +1153,17 @@ pa_sink *pa_droid_sink_new(pa_module *m,
          * hw module ourself.
          *
          * First let's find out if hw module has already been opened, or if we need to
-         * do it ourself.
-         */
+         * do it ourself. */
         if (!(u->hw_module = pa_droid_hw_module_get(u->core, NULL, module_id))) {
-
             /* No hw module object in shared object db, let's open the module now. */
-
             if (!(config = pa_droid_config_load(ma)))
                 goto fail;
 
-            /* Ownership of config transfers to hw_module if opening of hw module succeeds. */
             if (!(u->hw_module = pa_droid_hw_module_get(u->core, config, module_id)))
                 goto fail;
+
+            pa_droid_config_free(config);
+            config = NULL;
         }
     }
 
@@ -1172,9 +1193,9 @@ pa_sink *pa_droid_sink_new(pa_module *m,
     u->buffer_size = pa_droid_stream_buffer_size(u->stream);
     if (sink_buffer) {
         u->buffer_size = pa_droid_buffer_size_round_up(sink_buffer, u->buffer_size);
-        pa_log_info("Using buffer size %u (requested %u).", u->buffer_size, sink_buffer);
+        pa_log_info("Using buffer size %lu (requested %u).", u->buffer_size, sink_buffer);
     } else
-        pa_log_info("Using buffer size %u.", u->buffer_size);
+        pa_log_info("Using buffer size %lu.", u->buffer_size);
 
     if ((prewrite_resume = pa_modargs_get_value(ma, "prewrite_on_resume", NULL))) {
         if (!parse_prewrite_on_resume(u, prewrite_resume, am ? am->output->name : module_id)) {
@@ -1251,6 +1272,9 @@ pa_sink *pa_droid_sink_new(pa_module *m,
     u->sink->userdata = u;
 
     u->sink->parent.process_msg = sink_process_msg;
+#if PULSEAUDIO_VERSION >= 12
+    u->sink->set_state_in_io_thread = sink_set_state_in_io_thread_cb;
+#endif
 
     u->sink->set_port = sink_set_port_cb;
 
@@ -1274,7 +1298,7 @@ pa_sink *pa_droid_sink_new(pa_module *m,
     /* HAL latencies are in milliseconds. */
     latency = pa_droid_stream_get_latency(u->stream);
     pa_sink_set_fixed_latency(u->sink, latency);
-    pa_log_debug("Set fixed latency %llu usec", latency);
+    pa_log_debug("Set fixed latency %lu usec", latency);
     pa_sink_set_max_request(u->sink, u->buffer_size);
 
     if (u->sink->active_port)
@@ -1301,6 +1325,7 @@ pa_sink *pa_droid_sink_new(pa_module *m,
     return u->sink;
 
 fail:
+    pa_droid_config_free(config);
     pa_xfree(thread_name);
 
     if (config)
