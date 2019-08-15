@@ -1,3 +1,10 @@
+pulseaudio (12.2-4+deb10u1) buster; urgency=medium
+
+  * Pick upstream patch fixing mute state restoring (Closes: #913102)
+  * Add gbp config for buster branch
+
+ -- Felipe Sateler <fsateler@debian.org>  Thu, 15 Aug 2019 11:21:19 -0400
+
 pulseaudio (12.2-4) unstable; urgency=medium
 
   [ Jan Graichen ]
