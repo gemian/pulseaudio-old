@@ -54,12 +54,12 @@
 #include <pulsecore/random.h>
 #include <pulsecore/poll.h>
 
+#include <modules/rtp/rtsp_client.h>
+
 #include "raop-client.h"
 #include "raop-packet-buffer.h"
 #include "raop-crypto.h"
 #include "raop-util.h"
-
-#include "rtsp_client.h"
 
 #define DEFAULT_RAOP_PORT 5000
 
@@ -232,7 +232,7 @@ static inline void bit_writer(uint8_t **buffer, uint8_t *bit_pos, size_t *size, 
     if (!data_bit_len)
         return;
 
-    /* If bit pos is zero, we will definately use at least one bit from the current byte so size increments. */
+    /* If bit pos is zero, we will definitely use at least one bit from the current byte so size increments. */
     if (!*bit_pos)
         *size += 1;
 
@@ -555,7 +555,7 @@ static size_t build_udp_sync_packet(pa_raop_client *c, uint32_t stamp, uint32_t 
         buffer[0] |= 0x10;
     stamp -= delay;
     buffer[1] = htonl(stamp);
-    /* Set the transmited timestamp to current time. */
+    /* Set the transmitted timestamp to current time. */
     transmitted = timeval_to_ntp(pa_rtclock_get(&tv));
     buffer[2] = htonl(transmitted >> 32);
     buffer[3] = htonl(transmitted & 0xffffffff);
@@ -906,6 +906,15 @@ static void rtsp_stream_cb(pa_rtsp_client *rtsp, pa_rtsp_state_t state, pa_rtsp_
                 case PA_RAOP_ENCRYPTION_MFISAP:
                 case PA_RAOP_ENCRYPTION_FAIRPLAY_SAP25: {
                     key = pa_raop_secret_get_key(c->secret);
+                    if (!key) {
+                        pa_log("pa_raop_secret_get_key() failed.");
+                        pa_rtsp_disconnect(rtsp);
+                        /* FIXME: This is an unrecoverable failure. We should notify
+                         * the pa_raop_client owner so that it could shut itself
+                         * down. */
+                        goto connect_finish;
+                    }
+
                     iv = pa_raop_secret_get_iv(c->secret);
 
                     sdp = pa_sprintf_malloc(
@@ -929,6 +938,7 @@ static void rtsp_stream_cb(pa_rtsp_client *rtsp, pa_rtsp_state_t state, pa_rtsp_
 
             pa_rtsp_announce(c->rtsp, sdp);
 
+connect_finish:
             pa_xfree(sdp);
             pa_xfree(url);
             break;

@@ -106,7 +106,7 @@ static void raop_state_cb(pa_raop_state_t state, void *userdata) {
 
     pa_assert(u);
 
-    pa_log_debug("State change recieved, informing IO thread...");
+    pa_log_debug("State change received, informing IO thread...");
 
     pa_asyncmsgq_post(u->thread_mq.inq, PA_MSGOBJECT(u->sink), PA_SINK_MESSAGE_SET_RAOP_STATE, PA_INT_TO_PTR(state), 0, NULL, NULL);
 }
@@ -236,7 +236,7 @@ static int sink_set_state_in_io_thread_cb(pa_sink *s, pa_sink_state_t new_state,
         case PA_SINK_SUSPENDED:
             pa_log_debug("RAOP: SUSPENDED");
 
-            pa_assert(PA_SINK_IS_OPENED(u->sink->thread_info.state));
+            pa_assert(PA_SINK_IS_OPENED(s->thread_info.state));
 
             /* Issue a TEARDOWN if we are still connected */
             if (pa_raop_client_is_alive(u->raop)) {
@@ -248,8 +248,8 @@ static int sink_set_state_in_io_thread_cb(pa_sink *s, pa_sink_state_t new_state,
         case PA_SINK_IDLE:
             pa_log_debug("RAOP: IDLE");
 
-            /* Issue a FLUSH if we're comming from running state */
-            if (u->sink->thread_info.state == PA_SINK_RUNNING) {
+            /* Issue a FLUSH if we're coming from running state */
+            if (s->thread_info.state == PA_SINK_RUNNING) {
                 pa_rtpoll_set_timer_disabled(u->rtpoll);
                 pa_raop_client_flush(u->raop);
             }

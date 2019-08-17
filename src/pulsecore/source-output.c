@@ -301,7 +301,7 @@ int pa_source_output_new(
         return -PA_ERR_NOTSUPPORTED;
     }
 
-    pa_return_val_if_fail(PA_SOURCE_IS_LINKED(pa_source_get_state(data->source)), -PA_ERR_BADSTATE);
+    pa_return_val_if_fail(PA_SOURCE_IS_LINKED(data->source->state), -PA_ERR_BADSTATE);
     pa_return_val_if_fail(!data->direct_on_input || data->direct_on_input->sink == data->source->monitor_of, -PA_ERR_INVALID);
 
     /* Routing is done. We have a source and a format. */
@@ -365,12 +365,11 @@ int pa_source_output_new(
 
     if (!(data->flags & PA_SOURCE_OUTPUT_VARIABLE_RATE) &&
         !pa_sample_spec_equal(&data->sample_spec, &data->source->sample_spec)) {
-        /* try to change source rate. This is done before the FIXATE hook since
+        /* try to change source format and rate. This is done before the FIXATE hook since
            module-suspend-on-idle can resume a source */
 
-        pa_log_info("Trying to change sample rate");
-        if (pa_source_reconfigure(data->source, &data->sample_spec, pa_source_output_new_data_is_passthrough(data)) >= 0)
-            pa_log_info("Rate changed to %u Hz", data->source->sample_spec.rate);
+        pa_log_info("Trying to change sample spec");
+        pa_source_reconfigure(data->source, &data->sample_spec, pa_source_output_new_data_is_passthrough(data));
     }
 
     if (pa_source_output_new_data_is_passthrough(data) &&
@@ -390,7 +389,7 @@ int pa_source_output_new(
         return r;
 
     if ((data->flags & PA_SOURCE_OUTPUT_NO_CREATE_ON_SUSPEND) &&
-        pa_source_get_state(data->source) == PA_SOURCE_SUSPENDED) {
+        data->source->state == PA_SOURCE_SUSPENDED) {
         pa_log("Failed to create source output: source is suspended.");
         return -PA_ERR_BADSTATE;
     }
@@ -542,7 +541,7 @@ static void source_output_set_state(pa_source_output *o, pa_source_output_state_
         if (o->state == PA_SOURCE_OUTPUT_CORKED && state == PA_SOURCE_OUTPUT_RUNNING && pa_source_used_by(o->source) == 0 &&
             !pa_sample_spec_equal(&o->sample_spec, &o->source->sample_spec)) {
             /* We were uncorked and the source was not playing anything -- let's try
-             * to update the sample rate to avoid resampling */
+             * to update the sample format and rate to avoid resampling */
             pa_source_reconfigure(o->source, &o->sample_spec, pa_source_output_is_passthrough(o));
         }
 
@@ -612,7 +611,7 @@ void pa_source_output_unlink(pa_source_output*o) {
     reset_callbacks(o);
 
     if (o->source) {
-        if (PA_SOURCE_IS_LINKED(pa_source_get_state(o->source)))
+        if (PA_SOURCE_IS_LINKED(o->source->state))
             pa_source_update_status(o->source);
 
         o->source = NULL;
@@ -867,7 +866,7 @@ void pa_source_output_process_rewind(pa_source_output *o, size_t nbytes /* in so
             pa_resampler_rewind(o->thread_info.resampler, nbytes);
 
     } else
-        pa_memblockq_rewind(o->thread_info.delay_memblockq, nbytes);
+        pa_memblockq_seek(o->thread_info.delay_memblockq, - ((int64_t) nbytes), PA_SEEK_RELATIVE, true);
 }
 
 /* Called from thread context */
@@ -1356,7 +1355,7 @@ int pa_source_output_start_move(pa_source_output *o) {
 
     pa_idxset_remove_by_data(o->source->outputs, o, NULL);
 
-    if (pa_source_output_get_state(o) == PA_SOURCE_OUTPUT_CORKED)
+    if (o->state == PA_SOURCE_OUTPUT_CORKED)
         pa_assert_se(origin->n_corked-- >= 1);
 
     if (pa_source_output_is_passthrough(o))
@@ -1533,13 +1532,12 @@ int pa_source_output_finish_move(pa_source_output *o, pa_source *dest, bool save
 
     if (!(o->flags & PA_SOURCE_OUTPUT_VARIABLE_RATE) &&
         !pa_sample_spec_equal(&o->sample_spec, &dest->sample_spec)) {
-        /* try to change dest source rate if possible without glitches.
+        /* try to change dest source format and rate if possible without glitches.
            module-suspend-on-idle resumes destination source with
            SOURCE_OUTPUT_MOVE_FINISH hook */
 
-        pa_log_info("Trying to change sample rate");
-        if (pa_source_reconfigure(dest, &o->sample_spec, pa_source_output_is_passthrough(o)) >= 0)
-            pa_log_info("Rate changed to %u Hz", dest->sample_spec.rate);
+        pa_log_info("Trying to change sample spec");
+        pa_source_reconfigure(dest, &o->sample_spec, pa_source_output_is_passthrough(o));
     }
 
     if (o->moving)
@@ -1551,10 +1549,10 @@ int pa_source_output_finish_move(pa_source_output *o, pa_source *dest, bool save
 
     pa_cvolume_remap(&o->volume_factor_source, &o->channel_map, &o->source->channel_map);
 
-    if (pa_source_output_get_state(o) == PA_SOURCE_OUTPUT_CORKED)
+    if (o->state == PA_SOURCE_OUTPUT_CORKED)
         o->source->n_corked++;
 
-    pa_source_output_update_rate(o);
+    pa_source_output_update_resampler(o);
 
     pa_source_update_status(dest);
 
@@ -1729,8 +1727,8 @@ finish:
 
 /* Called from main context */
 /* Updates the source output's resampler with whatever the current source
- * requires -- useful when the underlying source's rate might have changed */
-int pa_source_output_update_rate(pa_source_output *o) {
+ * requires -- useful when the underlying source's sample spec might have changed */
+int pa_source_output_update_resampler(pa_source_output *o) {
     pa_resampler *new_resampler;
     char *memblockq_name;
 

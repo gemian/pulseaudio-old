@@ -127,7 +127,9 @@ if HAVE_X11
 xdgautostart_in_files = \
 		daemon/pulseaudio.desktop.in
 xdgautostart_DATA = $(xdgautostart_in_files:.desktop.in=.desktop)
-@INTLTOOL_DESKTOP_RULE@
+$(xdgautostart_DATA): $(xdgautostart_in_files)
+	$(AM_V_GEN) $(MSGFMT) --desktop --template $< -d $(top_srcdir)/po -o $@
+
 endif
 
 
@@ -173,9 +175,9 @@ PREOPEN_LIBS = $(modlibexec_LTLIBRARIES)
 endif
 
 if FORCE_PREOPEN
-pulseaudio_LDFLAGS = $(AM_LDFLAGS) $(BINLDFLAGS) $(IMMEDIATE_LDFLAGS) -dlpreopen force $(foreach f,$(PREOPEN_LIBS),-dlpreopen $(f))
+pulseaudio_LDFLAGS = $(AM_LDFLAGS) $(BINLDFLAGS) $(IMMEDIATE_LDFLAGS) -ffast-math -dlpreopen force $(foreach f,$(PREOPEN_LIBS),-dlpreopen $(f))
 else
-pulseaudio_LDFLAGS = $(AM_LDFLAGS) $(BINLDFLAGS) $(IMMEDIATE_LDFLAGS) -dlopen force $(foreach f,$(PREOPEN_LIBS),-dlopen $(f))
+pulseaudio_LDFLAGS = $(AM_LDFLAGS) $(BINLDFLAGS) $(IMMEDIATE_LDFLAGS) -ffast-math -dlopen force $(foreach f,$(PREOPEN_LIBS),-dlopen $(f))
 endif
 
 if HAVE_SYSTEMD_DAEMON
@@ -291,14 +293,19 @@ TESTS_norun = \
 		sig2str-test \
 		stripnul \
 		echo-cancel-test \
-		lo-latency-test
+		lo-latency-test \
+		atomic-test
 
 # These tests need a running pulseaudio daemon
 TESTS_daemon = \
-		connect-stress \
 		extended-test \
-		interpol-test \
+		passthrough-test \
 		sync-playback
+
+# These tests need a running daemon and take a while to complete
+TESTS_daemon_long = \
+		connect-stress \
+		interpol-test
 
 if !OS_IS_WIN32
 TESTS_default += \
@@ -345,13 +352,16 @@ TESTS_ENVIRONMENT=MAKE_CHECK=1
 TESTS = $(TESTS_default)
 
 if BUILD_TESTS_DEFAULT
-noinst_PROGRAMS = $(TESTS_default) $(TESTS_norun) $(TESTS_daemon)
+noinst_PROGRAMS = $(TESTS_default) $(TESTS_norun) $(TESTS_daemon) $(TESTS_daemon_long)
 else
 check_PROGRAMS = $(TESTS_default) $(TESTS_norun)
 endif
 
 check-daemon: $(TESTS_daemon)
 	PATH=$(builddir):${PATH} $(top_srcdir)/src/tests/test-daemon.sh $(TESTS_daemon)
+
+check-daemon-long: $(TESTS_daemon_long)
+	PATH=$(builddir):${PATH} $(top_srcdir)/src/tests/test-daemon.sh $(TESTS_daemon_long)
 
 else
 TESTS_ENVIRONMENT=
@@ -363,6 +373,8 @@ check-daemon:
 	@echo "Tests are disabled!"
 	@echo "Pass option \"--enable-tests\" to configure and install \"check\" library properly!"
 	false
+
+check-daemon-long: check-daemon
 
 endif
 
@@ -400,6 +412,11 @@ srbchannel_test_SOURCES = tests/srbchannel-test.c
 srbchannel_test_CFLAGS = $(AM_CFLAGS) $(LIBCHECK_CFLAGS)
 srbchannel_test_LDADD = $(AM_LDADD) libpulse.la libpulsecommon-@PA_MAJORMINOR@.la
 srbchannel_test_LDFLAGS = $(AM_LDFLAGS) $(BINLDFLAGS) $(LIBCHECK_LIBS)
+
+atomic_test_SOURCES = tests/atomic-test.c
+atomic_test_CFLAGS = $(AM_CFLAGS) $(LIBCHECK_CFLAGS)
+atomic_test_LDADD = $(AM_LDADD) libpulsecommon-@PA_MAJORMINOR@.la libpulse.la
+atomic_test_LDFLAGS = $(AM_LDFLAGS) $(BINLDFLAGS) $(LIBCHECK_LIBS)
 
 get_binary_name_test_SOURCES = tests/get-binary-name-test.c
 get_binary_name_test_CFLAGS = $(AM_CFLAGS) $(LIBCHECK_CFLAGS)
@@ -475,6 +492,11 @@ extended_test_SOURCES = tests/extended-test.c
 extended_test_LDADD = $(AM_LDADD) libpulse.la
 extended_test_CFLAGS = $(AM_CFLAGS) $(LIBCHECK_CFLAGS)
 extended_test_LDFLAGS = $(AM_LDFLAGS) $(BINLDFLAGS) $(LIBCHECK_LIBS)
+
+passthrough_test_SOURCES = tests/passthrough-test.c
+passthrough_test_LDADD = $(AM_LDADD) libpulse.la libpulsecommon-@PA_MAJORMINOR@.la
+passthrough_test_CFLAGS = $(AM_CFLAGS) $(LIBCHECK_CFLAGS)
+passthrough_test_LDFLAGS = $(AM_LDFLAGS) $(BINLDFLAGS) $(LIBCHECK_LIBS)
 
 strlist_test_SOURCES = tests/strlist-test.c
 strlist_test_CFLAGS = $(AM_CFLAGS) $(LIBCHECK_CFLAGS)
@@ -731,8 +753,6 @@ libpulsecommon_@PA_MAJORMINOR@_la_SOURCES = \
 		pulsecore/socket-util.c pulsecore/socket-util.h \
 		pulsecore/strbuf.c pulsecore/strbuf.h \
 		pulsecore/strlist.c pulsecore/strlist.h \
-		pulsecore/svolume_c.c pulsecore/svolume_arm.c \
-		pulsecore/svolume_mmx.c pulsecore/svolume_sse.c \
 		pulsecore/tagstruct.c pulsecore/tagstruct.h \
 		pulsecore/time-smoother.c pulsecore/time-smoother.h \
 		pulsecore/tokenizer.c pulsecore/tokenizer.h \
@@ -778,7 +798,7 @@ endif
 libpulsecommon_@PA_MAJORMINOR@_la_CFLAGS += $(GLIB20_CFLAGS) $(GTK30_CFLAGS)
 
 ## Please note that libpulsecommon implicitly also depends on<
-## libpulse! i.e. we have a cyclic dependancy here. Which is intended
+## libpulse! i.e. we have a cyclic dependency here. Which is intended
 ## since libpulse only includes stable, official APIs, while
 ## libpulsecommon only includes unofficial APIs.
 
@@ -965,6 +985,7 @@ libpulsecore_@PA_MAJORMINOR@_la_SOURCES = \
 		pulsecore/core-scache.c pulsecore/core-scache.h \
 		pulsecore/core-subscribe.c pulsecore/core-subscribe.h \
 		pulsecore/core.c pulsecore/core.h \
+		pulsecore/message-handler.c pulsecore/message-handler.h \
 		pulsecore/hook-list.c pulsecore/hook-list.h \
 		pulsecore/ltdl-helper.c pulsecore/ltdl-helper.h \
 		pulsecore/modargs.c pulsecore/modargs.h \
@@ -982,6 +1003,8 @@ libpulsecore_@PA_MAJORMINOR@_la_SOURCES = \
 		pulsecore/resampler/trivial.c \
 		pulsecore/rtpoll.c pulsecore/rtpoll.h \
 		pulsecore/stream-util.c pulsecore/stream-util.h \
+		pulsecore/svolume_c.c pulsecore/svolume_arm.c \
+		pulsecore/svolume_mmx.c pulsecore/svolume_sse.c \
 		pulsecore/mix.c pulsecore/mix.h \
 		pulsecore/cpu.c pulsecore/cpu.h \
 		pulsecore/cpu-arm.c pulsecore/cpu-arm.h \
@@ -1320,12 +1343,14 @@ dist_alsaprofilesets_DATA = \
 		modules/alsa/mixer/profile-sets/native-instruments-korecontroller.conf \
 		modules/alsa/mixer/profile-sets/kinect-audio.conf \
 		modules/alsa/mixer/profile-sets/sb-omni-surround-5.1.conf \
-		modules/alsa/mixer/profile-sets/steelseries-arctis-usb-audio.conf \
-		modules/alsa/mixer/profile-sets/dell-dock-tb16-usb-audio.conf
+		modules/alsa/mixer/profile-sets/steelseries-arctis-5-usb-audio.conf \
+		modules/alsa/mixer/profile-sets/steelseries-arctis-7-usb-audio.conf \
+		modules/alsa/mixer/profile-sets/dell-dock-tb16-usb-audio.conf \
+		modules/alsa/mixer/profile-sets/cmedia-high-speed-true-hdaudio.conf
 
 if HAVE_UDEV
 dist_udevrules_DATA = \
-		modules/alsa/mixer/profile-sets/90-pulseaudio.rules
+		modules/alsa/90-pulseaudio.rules
 endif
 
 dist_alsapaths_DATA = \
@@ -1364,9 +1389,11 @@ dist_alsapaths_DATA = \
 		modules/alsa/mixer/paths/hdmi-output-5.conf \
 		modules/alsa/mixer/paths/hdmi-output-6.conf \
 		modules/alsa/mixer/paths/hdmi-output-7.conf \
-		modules/alsa/mixer/paths/steelseries-arctis-input.conf \
-		modules/alsa/mixer/paths/steelseries-arctis-output-mono.conf \
-		modules/alsa/mixer/paths/steelseries-arctis-output-stereo.conf
+		modules/alsa/mixer/paths/steelseries-arctis-5-output-chat.conf \
+		modules/alsa/mixer/paths/steelseries-arctis-5-output-game.conf \
+		modules/alsa/mixer/paths/steelseries-arctis-7-input.conf \
+		modules/alsa/mixer/paths/steelseries-arctis-7-output-mono.conf \
+		modules/alsa/mixer/paths/steelseries-arctis-7-output-stereo.conf
 
 endif
 
@@ -1457,13 +1484,6 @@ if HAVE_BLUEZ
 modlibexec_LTLIBRARIES += \
 		module-bluetooth-discover.la \
 		module-bluetooth-policy.la
-endif
-
-if HAVE_BLUEZ_4
-modlibexec_LTLIBRARIES += \
-		libbluez4-util.la \
-		module-bluez4-discover.la \
-		module-bluez4-device.la
 endif
 
 if HAVE_BLUEZ_5
@@ -2115,30 +2135,15 @@ module_bluetooth_discover_la_LDFLAGS = $(MODULE_LDFLAGS)
 module_bluetooth_discover_la_LIBADD = $(MODULE_LIBADD)
 module_bluetooth_discover_la_CFLAGS = $(AM_CFLAGS) -DPA_MODULE_NAME=module_bluetooth_discover
 
-# Bluetooth BlueZ 4 sink / source
-module_bluez4_discover_la_SOURCES = modules/bluetooth/module-bluez4-discover.c
-module_bluez4_discover_la_LDFLAGS = $(MODULE_LDFLAGS)
-module_bluez4_discover_la_LIBADD = $(MODULE_LIBADD) $(DBUS_LIBS) libbluez4-util.la
-module_bluez4_discover_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS) -DPA_MODULE_NAME=module_bluez4_discover
-
-libbluez4_util_la_SOURCES = \
-		modules/bluetooth/a2dp-codecs.h \
-		modules/bluetooth/bluez4-util.c \
-		modules/bluetooth/bluez4-util.h
-libbluez4_util_la_LDFLAGS = -avoid-version
-libbluez4_util_la_LIBADD = $(MODULE_LIBADD) $(DBUS_LIBS)
-libbluez4_util_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
-
-module_bluez4_device_la_SOURCES = modules/bluetooth/module-bluez4-device.c modules/bluetooth/rtp.h
-module_bluez4_device_la_LDFLAGS = $(MODULE_LDFLAGS)
-module_bluez4_device_la_LIBADD = $(MODULE_LIBADD) $(DBUS_LIBS) $(SBC_LIBS) libbluez4-util.la
-module_bluez4_device_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS) $(SBC_CFLAGS) -DPA_MODULE_NAME=module_bluez4_device
-
 # Bluetooth BlueZ 5 sink / source
 libbluez5_util_la_SOURCES = \
 		modules/bluetooth/bluez5-util.c \
 		modules/bluetooth/bluez5-util.h \
-		modules/bluetooth/a2dp-codecs.h
+		modules/bluetooth/a2dp-codec-api.h \
+		modules/bluetooth/a2dp-codec-util.c \
+		modules/bluetooth/a2dp-codec-util.h \
+		modules/bluetooth/a2dp-codecs.h \
+		modules/bluetooth/rtp.h
 if HAVE_BLUEZ_5_OFONO_HEADSET
 libbluez5_util_la_SOURCES += \
 		modules/bluetooth/backend-ofono.c
@@ -2151,6 +2156,11 @@ endif
 libbluez5_util_la_LDFLAGS = -avoid-version
 libbluez5_util_la_LIBADD = $(MODULE_LIBADD) $(DBUS_LIBS)
 libbluez5_util_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
+libbluez5_util_la_CPPFLAGS = $(AM_CPPFLAGS)
+
+libbluez5_util_la_SOURCES += modules/bluetooth/a2dp-codec-sbc.c
+libbluez5_util_la_LIBADD += $(SBC_LIBS)
+libbluez5_util_la_CFLAGS += $(SBC_CFLAGS)
 
 module_bluez5_discover_la_SOURCES = modules/bluetooth/module-bluez5-discover.c
 module_bluez5_discover_la_LDFLAGS = $(MODULE_LDFLAGS)
@@ -2159,8 +2169,8 @@ module_bluez5_discover_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS) -DPA_MODULE_NAME=
 
 module_bluez5_device_la_SOURCES = modules/bluetooth/module-bluez5-device.c
 module_bluez5_device_la_LDFLAGS = $(MODULE_LDFLAGS)
-module_bluez5_device_la_LIBADD = $(MODULE_LIBADD) $(SBC_LIBS) libbluez5-util.la
-module_bluez5_device_la_CFLAGS = $(AM_CFLAGS) $(SBC_CFLAGS) -DPA_MODULE_NAME=module_bluez5_device
+module_bluez5_device_la_LIBADD = $(MODULE_LIBADD) libbluez5-util.la
+module_bluez5_device_la_CFLAGS = $(AM_CFLAGS) -DPA_MODULE_NAME=module_bluez5_device
 
 # Apple Airtunes/RAOP
 module_raop_sink_la_SOURCES = modules/raop/module-raop-sink.c

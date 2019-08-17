@@ -258,6 +258,8 @@ pa_source* pa_source_new(
     else
         s->alternate_sample_rate = s->core->alternate_sample_rate;
 
+    s->avoid_resampling = data->avoid_resampling;
+
     s->outputs = pa_idxset_new(NULL, NULL);
     s->n_corked = 0;
     s->monitor_of = NULL;
@@ -352,6 +354,8 @@ static int source_set_state(pa_source *s, pa_source_state_t state, pa_suspend_ca
     bool suspend_cause_changed;
     bool suspending;
     bool resuming;
+    pa_source_state_t old_state;
+    pa_suspend_cause_t old_suspend_cause;
 
     pa_assert(s);
     pa_assert_ctl_context();
@@ -421,6 +425,7 @@ static int source_set_state(pa_source *s, pa_source_state_t state, pa_suspend_ca
         }
     }
 
+    old_suspend_cause = s->suspend_cause;
     if (suspend_cause_changed) {
         char old_cause_buf[PA_SUSPEND_CAUSE_TO_STRING_BUF_SIZE];
         char new_cause_buf[PA_SUSPEND_CAUSE_TO_STRING_BUF_SIZE];
@@ -430,19 +435,20 @@ static int source_set_state(pa_source *s, pa_source_state_t state, pa_suspend_ca
         s->suspend_cause = suspend_cause;
     }
 
+    old_state = s->state;
     if (state_changed) {
         pa_log_debug("%s: state: %s -> %s", s->name, pa_source_state_to_string(s->state), pa_source_state_to_string(state));
         s->state = state;
 
         /* If we enter UNLINKED state, then we don't send change notifications.
          * pa_source_unlink() will send unlink notifications instead. */
-        if (state == PA_SOURCE_UNLINKED) {
+        if (state != PA_SOURCE_UNLINKED) {
             pa_hook_fire(&s->core->hooks[PA_CORE_HOOK_SOURCE_STATE_CHANGED], s);
             pa_subscription_post(s->core, PA_SUBSCRIPTION_EVENT_SOURCE | PA_SUBSCRIPTION_EVENT_CHANGE, s->index);
         }
     }
 
-    if (suspending || resuming) {
+    if (suspending || resuming || suspend_cause_changed) {
         pa_source_output *o;
         uint32_t idx;
 
@@ -453,7 +459,7 @@ static int source_set_state(pa_source *s, pa_source_state_t state, pa_suspend_ca
                 (o->flags & PA_SOURCE_OUTPUT_KILL_ON_SUSPEND))
                 pa_source_output_kill(o);
             else if (o->suspend)
-                o->suspend(o, state == PA_SOURCE_SUSPENDED);
+                o->suspend(o, old_state, old_suspend_cause);
     }
 
     return ret;
@@ -702,7 +708,11 @@ void pa_source_unlink(pa_source *s) {
     }
 
     if (linked)
-        source_set_state(s, PA_SOURCE_UNLINKED, 0);
+        /* It's important to keep the suspend cause unchanged when unlinking,
+         * because if we remove the SESSION suspend cause here, the alsa
+         * source will sync its volume with the hardware while another user is
+         * active, messing up the volume for that other user. */
+        source_set_state(s, PA_SOURCE_UNLINKED, s->suspend_cause);
     else
         s->state = PA_SOURCE_UNLINKED;
 
@@ -840,7 +850,7 @@ int pa_source_sync_suspend(pa_source *s) {
     pa_assert(PA_SOURCE_IS_LINKED(s->state));
     pa_assert(s->monitor_of);
 
-    state = pa_sink_get_state(s->monitor_of);
+    state = s->monitor_of->state;
     suspend_cause = s->monitor_of->suspend_cause;
 
     /* The monitor source usually has the same state and suspend cause as the
@@ -1018,59 +1028,63 @@ void pa_source_post_direct(pa_source*s, pa_source_output *o, const pa_memchunk *
 }
 
 /* Called from main thread */
-int pa_source_reconfigure(pa_source *s, pa_sample_spec *spec, bool passthrough) {
-    int ret;
+void pa_source_reconfigure(pa_source *s, pa_sample_spec *spec, bool passthrough) {
+    uint32_t idx;
+    pa_source_output *o;
     pa_sample_spec desired_spec;
     uint32_t default_rate = s->default_sample_rate;
     uint32_t alternate_rate = s->alternate_sample_rate;
     bool default_rate_is_usable = false;
     bool alternate_rate_is_usable = false;
-    bool avoid_resampling = s->core->avoid_resampling;
-
-    /* We currently only try to reconfigure the sample rate */
+    bool avoid_resampling = s->avoid_resampling;
 
     if (pa_sample_spec_equal(spec, &s->sample_spec))
-        return 0;
+        return;
 
     if (!s->reconfigure && !s->monitor_of)
-        return -1;
+        return;
 
     if (PA_UNLIKELY(default_rate == alternate_rate && !passthrough && !avoid_resampling)) {
         pa_log_debug("Default and alternate sample rates are the same, so there is no point in switching.");
-        return -1;
+        return;
     }
 
     if (PA_SOURCE_IS_RUNNING(s->state)) {
-        pa_log_info("Cannot update rate, SOURCE_IS_RUNNING, will keep using %u Hz",
-                    s->sample_spec.rate);
-        return -1;
+        pa_log_info("Cannot update sample spec, SOURCE_IS_RUNNING, will keep using %s and %u Hz",
+                    pa_sample_format_to_string(s->sample_spec.format), s->sample_spec.rate);
+        return;
     }
 
     if (s->monitor_of) {
         if (PA_SINK_IS_RUNNING(s->monitor_of->state)) {
-            pa_log_info("Cannot update rate, this is a monitor source and the sink is running.");
-            return -1;
+            pa_log_info("Cannot update sample spec, this is a monitor source and the sink is running.");
+            return;
         }
     }
 
     if (PA_UNLIKELY(!pa_sample_spec_valid(spec)))
-        return -1;
+        return;
 
     desired_spec = s->sample_spec;
 
     if (passthrough) {
-        /* We have to try to use the source output rate */
+        /* We have to try to use the source output format and rate */
+        desired_spec.format = spec->format;
         desired_spec.rate = spec->rate;
 
-    } else if (avoid_resampling && (spec->rate >= default_rate || spec->rate >= alternate_rate)) {
+    } else if (avoid_resampling) {
         /* We just try to set the source output's sample rate if it's not too low */
-        desired_spec.rate = spec->rate;
+        if (spec->rate >= default_rate || spec->rate >= alternate_rate)
+            desired_spec.rate = spec->rate;
+        desired_spec.format = spec->format;
 
     } else if (default_rate == spec->rate || alternate_rate == spec->rate) {
         /* We can directly try to use this rate */
         desired_spec.rate = spec->rate;
 
-    } else {
+    }
+
+    if (desired_spec.rate != spec->rate) {
         /* See if we can pick a rate that results in less resampling effort */
         if (default_rate % 11025 == 0 && spec->rate % 11025 == 0)
             default_rate_is_usable = true;
@@ -1088,16 +1102,17 @@ int pa_source_reconfigure(pa_source *s, pa_sample_spec *spec, bool passthrough) 
     }
 
     if (pa_sample_spec_equal(&desired_spec, &s->sample_spec) && passthrough == pa_source_is_passthrough(s))
-        return -1;
+        return;
 
     if (!passthrough && pa_source_used_by(s) > 0)
-        return -1;
+        return;
 
-    pa_log_debug("Suspending source %s due to changing the sample rate.", s->name);
+    pa_log_debug("Suspending source %s due to changing format, desired format = %s rate = %u",
+                 s->name, pa_sample_format_to_string(desired_spec.format), desired_spec.rate);
     pa_source_suspend(s, true, PA_SUSPEND_INTERNAL);
 
     if (s->reconfigure)
-        ret = s->reconfigure(s, &desired_spec, passthrough);
+        s->reconfigure(s, &desired_spec, passthrough);
     else {
         /* This is a monitor source. */
 
@@ -1105,43 +1120,22 @@ int pa_source_reconfigure(pa_source *s, pa_sample_spec *spec, bool passthrough) 
          * have no idea whether the behaviour with passthrough streams is
          * sensible. */
         if (!passthrough) {
-            pa_sample_spec old_spec = s->sample_spec;
-
             s->sample_spec = desired_spec;
-            ret = pa_sink_reconfigure(s->monitor_of, &desired_spec, false);
-
-            if (ret < 0) {
-                /* Changing the sink rate failed, roll back the old rate for
-                 * the monitor source. Why did we set the source rate before
-                 * calling pa_sink_reconfigure(), you may ask. The reason is
-                 * that pa_sink_reconfigure() tries to update the monitor
-                 * source rate, but we are already in the process of updating
-                 * the monitor source rate, so there's a risk of entering an
-                 * infinite loop. Setting the source rate before calling
-                 * pa_sink_reconfigure() makes the rate == s->sample_spec.rate
-                 * check in the beginning of this function return early, so we
-                 * avoid looping. */
-                s->sample_spec = old_spec;
-            }
+            pa_sink_reconfigure(s->monitor_of, &desired_spec, false);
+            s->sample_spec = s->monitor_of->sample_spec;
         } else
-            ret = -1;
+            goto unsuspend;
     }
 
-    if (ret >= 0) {
-        uint32_t idx;
-        pa_source_output *o;
-
-        PA_IDXSET_FOREACH(o, s->outputs, idx) {
-            if (o->state == PA_SOURCE_OUTPUT_CORKED)
-                pa_source_output_update_rate(o);
-        }
-
-        pa_log_info("Changed sampling rate successfully");
+    PA_IDXSET_FOREACH(o, s->outputs, idx) {
+        if (o->state == PA_SOURCE_OUTPUT_CORKED)
+            pa_source_output_update_resampler(o);
     }
 
+    pa_log_info("Reconfigured successfully");
+
+unsuspend:
     pa_source_suspend(s, false, PA_SUSPEND_INTERNAL);
-
-    return ret;
 }
 
 /* Called from main thread */
@@ -2022,22 +2016,18 @@ unsigned pa_source_check_suspend(pa_source *s, pa_source_output *ignore) {
     ret = 0;
 
     PA_IDXSET_FOREACH(o, s->outputs, idx) {
-        pa_source_output_state_t st;
-
         if (o == ignore)
             continue;
-
-        st = pa_source_output_get_state(o);
 
         /* We do not assert here. It is perfectly valid for a source output to
          * be in the INIT state (i.e. created, marked done but not yet put)
          * and we should not care if it's unlinked as it won't contribute
          * towards our busy status.
          */
-        if (!PA_SOURCE_OUTPUT_IS_LINKED(st))
+        if (!PA_SOURCE_OUTPUT_IS_LINKED(o->state))
             continue;
 
-        if (st == PA_SOURCE_OUTPUT_CORKED)
+        if (o->state == PA_SOURCE_OUTPUT_CORKED)
             continue;
 
         if (o->flags & PA_SOURCE_OUTPUT_DONT_INHIBIT_AUTO_SUSPEND)
@@ -2935,6 +2925,43 @@ done:
         pa_idxset_free(source_formats, (pa_free_cb_t) pa_format_info_free);
 
     return out_formats;
+}
+
+/* Called from the main thread */
+void pa_source_set_sample_format(pa_source *s, pa_sample_format_t format) {
+    pa_sample_format_t old_format;
+
+    pa_assert(s);
+    pa_assert(pa_sample_format_valid(format));
+
+    old_format = s->sample_spec.format;
+    if (old_format == format)
+        return;
+
+    pa_log_info("%s: format: %s -> %s",
+                s->name, pa_sample_format_to_string(old_format), pa_sample_format_to_string(format));
+
+    s->sample_spec.format = format;
+
+    pa_subscription_post(s->core, PA_SUBSCRIPTION_EVENT_SOURCE | PA_SUBSCRIPTION_EVENT_CHANGE, s->index);
+}
+
+/* Called from the main thread */
+void pa_source_set_sample_rate(pa_source *s, uint32_t rate) {
+    uint32_t old_rate;
+
+    pa_assert(s);
+    pa_assert(pa_sample_rate_valid(rate));
+
+    old_rate = s->sample_spec.rate;
+    if (old_rate == rate)
+        return;
+
+    pa_log_info("%s: rate: %u -> %u", s->name, old_rate, rate);
+
+    s->sample_spec.rate = rate;
+
+    pa_subscription_post(s->core, PA_SUBSCRIPTION_EVENT_SOURCE | PA_SUBSCRIPTION_EVENT_CHANGE, s->index);
 }
 
 /* Called from the main thread. */

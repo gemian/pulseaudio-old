@@ -83,6 +83,7 @@ struct pa_sink {
     pa_channel_map channel_map;
     uint32_t default_sample_rate;
     uint32_t alternate_sample_rate;
+    bool avoid_resampling:1;
 
     pa_idxset *inputs;
     unsigned n_corked;
@@ -266,7 +267,7 @@ struct pa_sink {
 
     /* Called whenever device parameters need to be changed. Called from
      * main thread. */
-    int (*reconfigure)(pa_sink *s, pa_sample_spec *spec, bool passthrough);
+    void (*reconfigure)(pa_sink *s, pa_sample_spec *spec, bool passthrough);
 
     /* Contains copies of the above data so that the real-time worker
      * thread can work without access locking */
@@ -376,6 +377,7 @@ typedef struct pa_sink_new_data {
     pa_sample_spec sample_spec;
     pa_channel_map channel_map;
     uint32_t alternate_sample_rate;
+    bool avoid_resampling:1;
     pa_cvolume volume;
     bool muted:1;
 
@@ -441,7 +443,7 @@ unsigned pa_device_init_priority(pa_proplist *p);
 
 /**** May be called by everyone, from main context */
 
-int pa_sink_reconfigure(pa_sink *s, pa_sample_spec *spec, bool passthrough);
+void pa_sink_reconfigure(pa_sink *s, pa_sample_spec *spec, bool passthrough);
 void pa_sink_set_port_latency_offset(pa_sink *s, int64_t offset);
 
 /* The returned value is supposed to be in the time domain of the sound card! */
@@ -492,8 +494,6 @@ unsigned pa_sink_used_by(pa_sink *s); /* Number of connected streams which are n
  * why "ignore_output" may be relevant). */
 unsigned pa_sink_check_suspend(pa_sink *s, pa_sink_input *ignore_input, pa_source_output *ignore_output);
 
-#define pa_sink_get_state(s) ((s)->state)
-
 const char *pa_sink_state_to_string(pa_sink_state_t state);
 
 /* Moves all inputs away, and stores them in pa_queue */
@@ -511,6 +511,9 @@ pa_idxset* pa_sink_get_formats(pa_sink *s);
 bool pa_sink_set_formats(pa_sink *s, pa_idxset *formats);
 bool pa_sink_check_format(pa_sink *s, pa_format_info *f);
 pa_idxset* pa_sink_check_formats(pa_sink *s, pa_idxset *in_formats);
+
+void pa_sink_set_sample_format(pa_sink *s, pa_sample_format_t format);
+void pa_sink_set_sample_rate(pa_sink *s, uint32_t rate);
 
 /*** To be called exclusively by the sink driver, from IO context */
 

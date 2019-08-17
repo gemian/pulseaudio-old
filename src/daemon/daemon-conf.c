@@ -155,12 +155,18 @@ pa_daemon_conf *pa_daemon_conf_new(void) {
     c->dl_search_path = pa_sprintf_malloc("%s" PA_PATH_SEP "lib" PA_PATH_SEP "pulse-%d.%d" PA_PATH_SEP "modules",
                                           pa_win32_get_toplevel(NULL), PA_MAJOR, PA_MINOR);
 #else
+#ifdef HAVE_RUNNING_FROM_BUILD_TREE
     if (pa_run_from_build_tree()) {
         pa_log_notice("Detected that we are run from the build tree, fixing search path.");
+#ifdef MESON_BUILD
+        c->dl_search_path = pa_xstrdup(PA_BUILDDIR PA_PATH_SEP "src" PA_PATH_SEP "modules");
+#else
         c->dl_search_path = pa_xstrdup(PA_BUILDDIR);
+#endif // Endof #ifdef MESON_BUILD
     } else
+#endif // Endof #ifdef HAVE_RUNNING_FROM_BUILD_TREE
         c->dl_search_path = pa_xstrdup(PA_DLSEARCHPATH);
-#endif
+#endif // Endof #ifdef OS_IS_WIN32
 
     return c;
 }
@@ -752,7 +758,7 @@ char *pa_daemon_conf_dump(pa_daemon_conf *c) {
     pa_strbuf_printf(s, "log-target = %s\n", pa_strempty(log_target));
     pa_strbuf_printf(s, "log-level = %s\n", log_level_to_string[c->log_level]);
     pa_strbuf_printf(s, "resample-method = %s\n", pa_resample_method_to_string(c->resample_method));
-    pa_strbuf_printf(s, "avoid-resampling = %s\n", pa_yes_no(!c->avoid_resampling));
+    pa_strbuf_printf(s, "avoid-resampling = %s\n", pa_yes_no(c->avoid_resampling));
     pa_strbuf_printf(s, "enable-remixing = %s\n", pa_yes_no(!c->disable_remixing));
     pa_strbuf_printf(s, "remixing-use-all-sink-channels = %s\n", pa_yes_no(c->remixing_use_all_sink_channels));
     pa_strbuf_printf(s, "enable-lfe-remixing = %s\n", pa_yes_no(!c->disable_lfe_remixing));

@@ -56,6 +56,9 @@
 /* Have ALSA UCM? */
 #undef HAVE_ALSA_UCM
 
+/* Define to 1 if you have the <alsa/use-case.h> header file. */
+#undef HAVE_ALSA_USE_CASE_H
+
 /* Have ARMv6 instructions. */
 #undef HAVE_ARMV6
 
@@ -64,6 +67,9 @@
 
 /* Have __sync_bool_compare_and_swap() and friends. */
 #undef HAVE_ATOMIC_BUILTINS
+
+/* Have __atomic_store_n() and friends. */
+#undef HAVE_ATOMIC_BUILTINS_MEMORY_MODEL
 
 /* Define to 1 if you have the <atomic_ops.h> header file. */
 #undef HAVE_ATOMIC_OPS_H
@@ -80,11 +86,11 @@
 /* Define to 1 if you have the <byteswap.h> header file. */
 #undef HAVE_BYTESWAP_H
 
-/* Define to 1 if you have the MacOS X function CFLocaleCopyCurrent in the
+/* Define to 1 if you have the Mac OS X function CFLocaleCopyCurrent in the
    CoreFoundation framework. */
 #undef HAVE_CFLOCALECOPYCURRENT
 
-/* Define to 1 if you have the MacOS X function CFPreferencesCopyAppValue in
+/* Define to 1 if you have the Mac OS X function CFPreferencesCopyAppValue in
    the CoreFoundation framework. */
 #undef HAVE_CFPREFERENCESCOPYAPPVALUE
 
@@ -114,9 +120,6 @@
 
 /* Have D-Bus. */
 #undef HAVE_DBUS
-
-/* Define to 1 if you have the `dbus_watch_get_unix_fd' function. */
-#undef HAVE_DBUS_WATCH_GET_UNIX_FD
 
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */
@@ -363,6 +366,9 @@
 /* Define to 1 if you have the <regex.h> header file. */
 #undef HAVE_REGEX_H
 
+/* Have running from build tree */
+#undef HAVE_RUNNING_FROM_BUILD_TREE
+
 /* Define to 1 if you have the <sched.h> header file. */
 #undef HAVE_SCHED_H
 
@@ -536,9 +542,6 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
-
-/* Define to 1 if you have the <use-case.h> header file. */
-#undef HAVE_USE_CASE_H
 
 /* Define to 1 if you have the `usleep' function. */
 #undef HAVE_USLEEP

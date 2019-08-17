@@ -23,7 +23,7 @@
 #endif
 
 #include <sys/types.h>
-#include <asoundlib.h>
+#include <alsa/asoundlib.h>
 
 #include <pulse/sample.h>
 #include <pulse/xmalloc.h>
@@ -45,7 +45,7 @@
 #include "alsa-mixer.h"
 
 #ifdef HAVE_UDEV
-#include "udev-util.h"
+#include <modules/udev-util.h>
 #endif
 
 static int set_format(snd_pcm_t *pcm_handle, snd_pcm_hw_params_t *hwparams, pa_sample_format_t *f) {
@@ -1090,6 +1090,11 @@ int pa_alsa_recover_from_poll(snd_pcm_t *pcm, int revents) {
 
     switch (state) {
 
+        case SND_PCM_STATE_DISCONNECTED:
+            /* Do not try to recover */
+            pa_log_info("Device disconnected.");
+            return -1;
+
         case SND_PCM_STATE_XRUN:
             if ((err = snd_pcm_recover(pcm, -EPIPE, 1)) != 0) {
                 pa_log_warn("Could not recover from POLLERR|POLLNVAL|POLLHUP and XRUN: %s", pa_alsa_strerror(err));
@@ -1098,21 +1103,21 @@ int pa_alsa_recover_from_poll(snd_pcm_t *pcm, int revents) {
             break;
 
         case SND_PCM_STATE_SUSPENDED:
-            if ((err = snd_pcm_recover(pcm, -ESTRPIPE, 1)) != 0) {
-                pa_log_warn("Could not recover from POLLERR|POLLNVAL|POLLHUP and SUSPENDED: %s", pa_alsa_strerror(err));
-                return -1;
+            /* Retry resume 3 times before giving up, then fallback to restarting the stream. */
+            for (int i = 0; i < 3; i++) {
+                if ((err = snd_pcm_resume(pcm)) == 0)
+                    return 0;
+                if (err != -EAGAIN)
+                    break;
+                pa_msleep(25);
             }
-            break;
+            pa_log_warn("Could not recover alsa device from SUSPENDED state, trying to restart PCM");
+            /* Fall through */
 
         default:
 
             snd_pcm_drop(pcm);
-
-            if ((err = snd_pcm_prepare(pcm)) < 0) {
-                pa_log_warn("Could not recover from POLLERR|POLLNVAL|POLLHUP with snd_pcm_prepare(): %s", pa_alsa_strerror(err));
-                return -1;
-            }
-            break;
+            return 1;
     }
 
     return 0;
@@ -1165,8 +1170,11 @@ snd_pcm_sframes_t pa_alsa_safe_avail(snd_pcm_t *pcm, size_t hwbuf_size, const pa
 
         PA_ONCE_BEGIN {
             char *dn = pa_alsa_get_driver_name_by_pcm(pcm);
-            pa_log(_("snd_pcm_avail() returned a value that is exceptionally large: %lu bytes (%lu ms).\n"
-                     "Most likely this is a bug in the ALSA driver '%s'. Please report this issue to the ALSA developers."),
+            pa_log(ngettext("snd_pcm_avail() returned a value that is exceptionally large: %lu byte (%lu ms).\n"
+                            "Most likely this is a bug in the ALSA driver '%s'. Please report this issue to the ALSA developers.",
+                            "snd_pcm_avail() returned a value that is exceptionally large: %lu bytes (%lu ms).\n"
+                            "Most likely this is a bug in the ALSA driver '%s'. Please report this issue to the ALSA developers.",
+                            (unsigned long) k),
                    (unsigned long) k,
                    (unsigned long) (pa_bytes_to_usec(k, ss) / PA_USEC_PER_MSEC),
                    pa_strnull(dn));
@@ -1228,8 +1236,11 @@ int pa_alsa_safe_delay(snd_pcm_t *pcm, snd_pcm_status_t *status, snd_pcm_sframes
 
         PA_ONCE_BEGIN {
             char *dn = pa_alsa_get_driver_name_by_pcm(pcm);
-            pa_log(_("snd_pcm_delay() returned a value that is exceptionally large: %li bytes (%s%lu ms).\n"
-                     "Most likely this is a bug in the ALSA driver '%s'. Please report this issue to the ALSA developers."),
+            pa_log(ngettext("snd_pcm_delay() returned a value that is exceptionally large: %li byte (%s%lu ms).\n"
+                            "Most likely this is a bug in the ALSA driver '%s'. Please report this issue to the ALSA developers.",
+                            "snd_pcm_delay() returned a value that is exceptionally large: %li bytes (%s%lu ms).\n"
+                            "Most likely this is a bug in the ALSA driver '%s'. Please report this issue to the ALSA developers.",
+                            (signed long) k),
                    (signed long) k,
                    k < 0 ? "-" : "",
                    (unsigned long) (pa_bytes_to_usec(abs_k, ss) / PA_USEC_PER_MSEC),
@@ -1253,8 +1264,11 @@ int pa_alsa_safe_delay(snd_pcm_t *pcm, snd_pcm_status_t *status, snd_pcm_sframes
 
             PA_ONCE_BEGIN {
                 char *dn = pa_alsa_get_driver_name_by_pcm(pcm);
-                pa_log(_("snd_pcm_avail() returned a value that is exceptionally large: %lu bytes (%lu ms).\n"
-                         "Most likely this is a bug in the ALSA driver '%s'. Please report this issue to the ALSA developers."),
+                pa_log(ngettext("snd_pcm_avail() returned a value that is exceptionally large: %lu byte (%lu ms).\n"
+                                "Most likely this is a bug in the ALSA driver '%s'. Please report this issue to the ALSA developers.",
+                                "snd_pcm_avail() returned a value that is exceptionally large: %lu bytes (%lu ms).\n"
+                                "Most likely this is a bug in the ALSA driver '%s'. Please report this issue to the ALSA developers.",
+                                (unsigned long) k),
                        (unsigned long) k,
                        (unsigned long) (pa_bytes_to_usec(k, ss) / PA_USEC_PER_MSEC),
                        pa_strnull(dn));
@@ -1312,8 +1326,11 @@ int pa_alsa_safe_mmap_begin(snd_pcm_t *pcm, const snd_pcm_channel_area_t **areas
                     k >= pa_bytes_per_second(ss)*10))
         PA_ONCE_BEGIN {
             char *dn = pa_alsa_get_driver_name_by_pcm(pcm);
-            pa_log(_("snd_pcm_mmap_begin() returned a value that is exceptionally large: %lu bytes (%lu ms).\n"
-                     "Most likely this is a bug in the ALSA driver '%s'. Please report this issue to the ALSA developers."),
+            pa_log(ngettext("snd_pcm_mmap_begin() returned a value that is exceptionally large: %lu byte (%lu ms).\n"
+                            "Most likely this is a bug in the ALSA driver '%s'. Please report this issue to the ALSA developers.",
+                            "snd_pcm_mmap_begin() returned a value that is exceptionally large: %lu bytes (%lu ms).\n"
+                            "Most likely this is a bug in the ALSA driver '%s'. Please report this issue to the ALSA developers.",
+                            (unsigned long) k),
                    (unsigned long) k,
                    (unsigned long) (pa_bytes_to_usec(k, ss) / PA_USEC_PER_MSEC),
                    pa_strnull(dn));
@@ -1428,6 +1445,84 @@ unsigned int *pa_alsa_get_supported_rates(snd_pcm_t *pcm, unsigned int fallback_
     }
 
     return rates;
+}
+
+pa_sample_format_t *pa_alsa_get_supported_formats(snd_pcm_t *pcm, pa_sample_format_t fallback_format) {
+    static const snd_pcm_format_t format_trans_to_pa[] = {
+        [SND_PCM_FORMAT_U8] = PA_SAMPLE_U8,
+        [SND_PCM_FORMAT_A_LAW] = PA_SAMPLE_ALAW,
+        [SND_PCM_FORMAT_MU_LAW] = PA_SAMPLE_ULAW,
+        [SND_PCM_FORMAT_S16_LE] = PA_SAMPLE_S16LE,
+        [SND_PCM_FORMAT_S16_BE] = PA_SAMPLE_S16BE,
+        [SND_PCM_FORMAT_FLOAT_LE] = PA_SAMPLE_FLOAT32LE,
+        [SND_PCM_FORMAT_FLOAT_BE] = PA_SAMPLE_FLOAT32BE,
+        [SND_PCM_FORMAT_S32_LE] = PA_SAMPLE_S32LE,
+        [SND_PCM_FORMAT_S32_BE] = PA_SAMPLE_S32BE,
+        [SND_PCM_FORMAT_S24_3LE] = PA_SAMPLE_S24LE,
+        [SND_PCM_FORMAT_S24_3BE] = PA_SAMPLE_S24BE,
+        [SND_PCM_FORMAT_S24_LE] = PA_SAMPLE_S24_32LE,
+        [SND_PCM_FORMAT_S24_BE] = PA_SAMPLE_S24_32BE,
+    };
+    static const snd_pcm_format_t all_formats[] = {
+        SND_PCM_FORMAT_U8,
+        SND_PCM_FORMAT_A_LAW,
+        SND_PCM_FORMAT_MU_LAW,
+        SND_PCM_FORMAT_S16_LE,
+        SND_PCM_FORMAT_S16_BE,
+        SND_PCM_FORMAT_FLOAT_LE,
+        SND_PCM_FORMAT_FLOAT_BE,
+        SND_PCM_FORMAT_S32_LE,
+        SND_PCM_FORMAT_S32_BE,
+        SND_PCM_FORMAT_S24_3LE,
+        SND_PCM_FORMAT_S24_3BE,
+        SND_PCM_FORMAT_S24_LE,
+        SND_PCM_FORMAT_S24_BE,
+    };
+    bool supported[PA_ELEMENTSOF(all_formats)] = {
+        false,
+    };
+    snd_pcm_hw_params_t *hwparams;
+    unsigned int i, j, n;
+    pa_sample_format_t *formats = NULL;
+    int ret;
+
+    snd_pcm_hw_params_alloca(&hwparams);
+
+    if ((ret = snd_pcm_hw_params_any(pcm, hwparams)) < 0) {
+        pa_log_debug("snd_pcm_hw_params_any() failed: %s", pa_alsa_strerror(ret));
+        return NULL;
+    }
+
+    for (i = 0, n = 0; i < PA_ELEMENTSOF(all_formats); i++) {
+        if (snd_pcm_hw_params_test_format(pcm, hwparams, all_formats[i]) == 0) {
+            supported[i] = true;
+            n++;
+        }
+    }
+
+    if (n > 0) {
+        formats = pa_xnew(pa_sample_format_t, n + 1);
+
+        for (i = 0, j = 0; i < PA_ELEMENTSOF(all_formats); i++) {
+            if (supported[i])
+                formats[j++] = format_trans_to_pa[all_formats[i]];
+        }
+
+        formats[j] = PA_SAMPLE_MAX;
+    } else {
+        formats = pa_xnew(pa_sample_format_t, 2);
+
+        formats[0] = fallback_format;
+        if ((ret = snd_pcm_hw_params_set_format(pcm, hwparams, format_trans_to_pa[formats[0]])) < 0) {
+            pa_log_debug("snd_pcm_hw_params_set_format() failed: %s", pa_alsa_strerror(ret));
+            pa_xfree(formats);
+            return NULL;
+        }
+
+        formats[1] = PA_SAMPLE_MAX;
+    }
+
+    return formats;
 }
 
 bool pa_alsa_pcm_is_hw(snd_pcm_t *pcm) {

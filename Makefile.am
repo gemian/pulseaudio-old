@@ -28,6 +28,7 @@ EXTRA_DIST = \
 	doxygen/doxygen.conf.in \
 	PROTOCOL \
 	README \
+	CODE_OF_CONDUCT.md \
 	scripts/benchmark_memory_usage.sh \
 	scripts/plot_memory_usage.gp \
 	scripts/benchmarks/README \
@@ -40,7 +41,31 @@ EXTRA_DIST = \
 	scripts/benchmarks/.gitignore \
 	src/.gitignore \
 	src/daemon/.gitignore \
-	src/pulse/.gitignore
+	src/pulse/.gitignore \
+	meson.build \
+	meson_options.txt \
+	man/meson.build \
+	po/meson.build \
+	shell-completion/bash/meson.build \
+	shell-completion/zsh/meson.build \
+	src/daemon/meson.build \
+	src/meson.build \
+	src/modules/alsa/meson.build \
+	src/modules/alsa/mixer/meson.build \
+	src/modules/bluetooth/meson.build \
+	src/modules/echo-cancel/meson.build \
+	src/modules/gsettings/meson.build \
+	src/modules/gsettings/post-install.sh \
+	src/modules/meson.build \
+	src/modules/oss/meson.build \
+	src/modules/raop/meson.build \
+	src/modules/rtp/meson.build \
+	src/pulsecore/meson.build \
+	src/pulse/meson.build \
+	src/tests/meson.build \
+	src/tests/test-daemon.meson.sh \
+	src/utils/meson.build \
+	vala/meson.build
 
 SUBDIRS = src doxygen man po
 
@@ -108,14 +133,14 @@ dist-hook:
 check-daemon:
 	$(MAKE) -C src check-daemon
 
+check-daemon-long:
+	$(MAKE) -C src check-daemon-long
+
 .PHONY: homepage distcleancheck doxygen
 
 # see git-version-gen
 BUILT_SOURCES = $(top_srcdir)/.version
 $(top_srcdir)/.version:
 	echo $(VERSION) > $@-t && mv $@-t $@
-
-DISTCLEANFILES = \
-        po/.intltool-merge-cache
 
 DISTCHECK_CONFIGURE_FLAGS = --with-udev-rules-dir="$$dc_install_base/lib/udev/rules.d" --with-systemduserunitdir="$$dc_install_base/lib/systemd/user" --with-bash-completion-dir="$$dc_install_base/share/bash-completion/completions"

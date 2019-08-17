@@ -150,8 +150,9 @@ struct pa_source_output {
     void (*detach) (pa_source_output *o);           /* may be NULL */
 
     /* If non-NULL called whenever the source this output is attached
-     * to suspends or resumes. Called from main context */
-    void (*suspend) (pa_source_output *o, bool b);   /* may be NULL */
+     * to suspends or resumes or if the suspend cause changes.
+     * Called from main context */
+    void (*suspend) (pa_source_output *o, pa_source_state_t old_state, pa_suspend_cause_t old_suspend_cause);   /* may be NULL */
 
     /* If non-NULL called whenever the source this output is attached
      * to suspends or resumes. Called from IO context */
@@ -307,7 +308,7 @@ pa_usec_t pa_source_output_set_requested_latency(pa_source_output *o, pa_usec_t 
 void pa_source_output_cork(pa_source_output *o, bool b);
 
 int pa_source_output_set_rate(pa_source_output *o, uint32_t rate);
-int pa_source_output_update_rate(pa_source_output *o);
+int pa_source_output_update_resampler(pa_source_output *o);
 
 size_t pa_source_output_get_max_rewind(pa_source_output *o);
 
@@ -343,8 +344,6 @@ int pa_source_output_move_to(pa_source_output *o, pa_source *dest, bool save);
 int pa_source_output_start_move(pa_source_output *o);
 int pa_source_output_finish_move(pa_source_output *o, pa_source *dest, bool save);
 void pa_source_output_fail_move(pa_source_output *o);
-
-#define pa_source_output_get_state(o) ((o)->state)
 
 pa_usec_t pa_source_output_get_requested_latency(pa_source_output *o);
 

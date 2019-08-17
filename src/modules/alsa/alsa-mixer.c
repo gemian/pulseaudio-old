@@ -23,7 +23,7 @@
 #endif
 
 #include <sys/types.h>
-#include <asoundlib.h>
+#include <alsa/asoundlib.h>
 #include <math.h>
 
 #ifdef HAVE_VALGRIND_MEMCHECK_H
@@ -2545,6 +2545,8 @@ static int path_verify(pa_alsa_path *p) {
         { "iec958-passthrough-output",  N_("Digital Passthrough (S/PDIF)") },
         { "multichannel-input",         N_("Multichannel Input") },
         { "multichannel-output",        N_("Multichannel Output") },
+        { "steelseries-arctis-5-output-game", N_("Game Output") },
+        { "steelseries-arctis-5-output-chat", N_("Chat Output") },
     };
 
     pa_alsa_element *e;
@@ -2571,9 +2573,11 @@ static int path_verify(pa_alsa_path *p) {
 }
 
 static const char *get_default_paths_dir(void) {
+#ifdef HAVE_RUNNING_FROM_BUILD_TREE
     if (pa_run_from_build_tree())
         return PA_SRCDIR "/modules/alsa/mixer/paths/";
     else
+#endif
         return PA_ALSA_PATHS_DIR;
 }
 
@@ -4058,6 +4062,7 @@ static int mapping_verify(pa_alsa_mapping *m, const pa_channel_map *bonus) {
     static const struct description_map well_known_descriptions[] = {
         { "analog-mono",            N_("Analog Mono") },
         { "analog-stereo",          N_("Analog Stereo") },
+        { "mono-fallback",          N_("Mono") },
         { "stereo-fallback",        N_("Stereo") },
         /* Note: Not translated to "Analog Stereo Input", because the source
          * name gets "Input" appended to it automatically, so adding "Input"
@@ -4080,7 +4085,7 @@ static int mapping_verify(pa_alsa_mapping *m, const pa_channel_map *bonus) {
         { "analog-surround-70",     N_("Analog Surround 7.0") },
         { "analog-surround-71",     N_("Analog Surround 7.1") },
         { "iec958-stereo",          N_("Digital Stereo (IEC958)") },
-        { "iec958-passthrough",     N_("Digital Passthrough  (IEC958)") },
+        { "iec958-passthrough",     N_("Digital Passthrough (IEC958)") },
         { "iec958-ac3-surround-40", N_("Digital Surround 4.0 (IEC958/AC3)") },
         { "iec958-ac3-surround-51", N_("Digital Surround 5.1 (IEC958/AC3)") },
         { "iec958-dts-surround-51", N_("Digital Surround 5.1 (IEC958/DTS)") },
@@ -4455,7 +4460,9 @@ pa_alsa_profile_set* pa_alsa_profile_set_new(const char *fname, const pa_channel
         fname = "default.conf";
 
     fn = pa_maybe_prefix_path(fname,
+#ifdef HAVE_RUNNING_FROM_BUILD_TREE
                               pa_run_from_build_tree() ? PA_SRCDIR "/modules/alsa/mixer/profile-sets/" :
+#endif
                               PA_ALSA_PROFILE_SETS_DIR);
 
     r = pa_config_parse(fn, NULL, items, NULL, false, ps);

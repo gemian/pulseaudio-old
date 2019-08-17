@@ -103,6 +103,7 @@ pa_core* pa_core_new(pa_mainloop_api *m, bool shared, bool enable_memfd, size_t 
 
     c->namereg = pa_hashmap_new(pa_idxset_string_hash_func, pa_idxset_string_compare_func);
     c->shared = pa_hashmap_new(pa_idxset_string_hash_func, pa_idxset_string_compare_func);
+    c->message_handlers = pa_hashmap_new(pa_idxset_string_hash_func, pa_idxset_string_compare_func);
 
     c->default_source = NULL;
     c->default_sink = NULL;
@@ -204,6 +205,9 @@ static void core_free(pa_object *o) {
     pa_assert(pa_hashmap_isempty(c->shared));
     pa_hashmap_free(c->shared);
 
+    pa_assert(pa_hashmap_isempty(c->message_handlers));
+    pa_hashmap_free(c->message_handlers);
+
     pa_assert(pa_hashmap_isempty(c->modules_pending_unload));
     pa_hashmap_free(c->modules_pending_unload);
 
@@ -240,6 +244,7 @@ void pa_core_set_configured_default_sink(pa_core *core, const char *sink) {
     core->configured_default_sink = pa_xstrdup(sink);
     pa_log_info("configured_default_sink: %s -> %s",
                 old_sink ? old_sink : "(unset)", sink ? sink : "(unset)");
+    pa_subscription_post(core, PA_SUBSCRIPTION_EVENT_SERVER | PA_SUBSCRIPTION_EVENT_CHANGE, PA_INVALID_INDEX);
 
     pa_core_update_default_sink(core);
 
@@ -261,6 +266,7 @@ void pa_core_set_configured_default_source(pa_core *core, const char *source) {
     core->configured_default_source = pa_xstrdup(source);
     pa_log_info("configured_default_source: %s -> %s",
                 old_source ? old_source : "(unset)", source ? source : "(unset)");
+    pa_subscription_post(core, PA_SUBSCRIPTION_EVENT_SERVER | PA_SUBSCRIPTION_EVENT_CHANGE, PA_INVALID_INDEX);
 
     pa_core_update_default_source(core);
 
@@ -426,6 +432,16 @@ void pa_core_update_default_source(pa_core *core) {
     pa_hook_fire(&core->hooks[PA_CORE_HOOK_DEFAULT_SOURCE_CHANGED], core->default_source);
 }
 
+void pa_core_set_exit_idle_time(pa_core *core, int time) {
+    pa_assert(core);
+
+    if (time == core->exit_idle_time)
+        return;
+
+    pa_log_info("exit_idle_time: %i -> %i", core->exit_idle_time, time);
+    core->exit_idle_time = time;
+}
+
 static void exit_callback(pa_mainloop_api *m, pa_time_event *e, const struct timeval *t, void *userdata) {
     pa_core *c = userdata;
     pa_assert(c->exit_event == e);
@@ -471,12 +487,12 @@ void pa_core_maybe_vacuum(pa_core *c) {
 
         idx = 0;
         PA_IDXSET_FOREACH(si, c->sinks, idx)
-            if (pa_sink_get_state(si) != PA_SINK_SUSPENDED)
+            if (si->state != PA_SINK_SUSPENDED)
                 return;
 
         idx = 0;
         PA_IDXSET_FOREACH(so, c->sources, idx)
-            if (pa_source_get_state(so) != PA_SOURCE_SUSPENDED)
+            if (so->state != PA_SOURCE_SUSPENDED)
                 return;
 
         pa_log_info("All sinks and sources are suspended, vacuuming memory");

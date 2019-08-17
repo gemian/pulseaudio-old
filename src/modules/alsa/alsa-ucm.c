@@ -27,7 +27,7 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <limits.h>
-#include <asoundlib.h>
+#include <alsa/asoundlib.h>
 
 #ifdef HAVE_VALGRIND_MEMCHECK_H
 #include <valgrind/memcheck.h>
@@ -801,7 +801,7 @@ static int ucm_port_contains(const char *port_name, const char *dev_name, bool i
     int ret = 0;
     const char *r;
     const char *state = NULL;
-    int len;
+    size_t len;
 
     if (!port_name || !dev_name)
         return false;
@@ -809,7 +809,7 @@ static int ucm_port_contains(const char *port_name, const char *dev_name, bool i
     port_name += is_sink ? strlen(PA_UCM_PRE_TAG_OUTPUT) : strlen(PA_UCM_PRE_TAG_INPUT);
 
     while ((r = pa_split_in_place(port_name, "+", &len, &state))) {
-        if (!strncmp(r, dev_name, len)) {
+        if (strlen(dev_name) == len && !strncmp(r, dev_name, len)) {
             ret = 1;
             break;
         }

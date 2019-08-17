@@ -164,7 +164,7 @@ struct pa_core {
     pa_idxset *clients, *cards, *sinks, *sources, *sink_inputs, *source_outputs, *modules, *scache;
 
     /* Some hashmaps for all sorts of entities */
-    pa_hashmap *namereg, *shared;
+    pa_hashmap *namereg, *shared, *message_handlers;
 
     /* The default sink/source as configured by the user. If the user hasn't
      * explicitly configured anything, these are set to NULL. These are strings
@@ -257,6 +257,8 @@ void pa_core_set_configured_default_source(pa_core *core, const char *source);
  * ordering. */
 void pa_core_update_default_sink(pa_core *core);
 void pa_core_update_default_source(pa_core *core);
+
+void pa_core_set_exit_idle_time(pa_core *core, int time);
 
 /* Check whether no one is connected to this core */
 void pa_core_check_idle(pa_core *c);
