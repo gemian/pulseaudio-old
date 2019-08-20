@@ -1,3 +1,13 @@
+pulseaudio (12.99.2-1) UNRELEASED; urgency=medium
+
+  * New upstream version 12.99.2
+    - Fixes FTBFS with gcc-9. (Closes: #925807)
+    - Drop all patches, applied upstream
+  * Remove autopoint override.
+    Since version 12, regular intltool is used, not gtkdocize
+
+ -- Felipe Sateler <fsateler@debian.org>  Mon, 19 Aug 2019 22:56:19 -0400
+
 pulseaudio (12.2-5) unstable; urgency=medium
 
   * Pick upstream patch fixing mute state restoring (Closes: #913102)
