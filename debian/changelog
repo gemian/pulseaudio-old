@@ -1,4 +1,4 @@
-pulseaudio (13.0-1) UNRELEASED; urgency=medium
+pulseaudio (13.0-1) unstable; urgency=medium
 
   * New upstream version
   * debian/pulseaudio-utils.install:
