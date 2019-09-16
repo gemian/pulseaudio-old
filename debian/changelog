@@ -1,3 +1,9 @@
+pulseaudio (13.0-1) UNRELEASED; urgency=medium
+
+  * New upstream version
+
+ -- Sebastien Bacher <seb128@ubuntu.com>  Mon, 16 Sep 2019 15:06:43 +0200
+
 pulseaudio (12.99.2-1) unstable; urgency=medium
 
   * New upstream version 12.99.2

@@ -82,7 +82,7 @@ endif
 if host_machine.system() != 'darwin'
   default_tests += [
     [ 'once-test', 'once-test.c',
-      [ check_dep, thread_dep, libpulse_dep, libpulsecommon_dep, libpulsecore_dep ] ],
+      [ check_dep, thread_dep, libpulse_dep, libpulsecommon_dep, libpulsecore_dep, libatomic_ops_dep ] ],
   ]
 endif
 
@@ -127,7 +127,7 @@ norun_tests = [
   [ 'remix-test', 'remix-test.c',
     [ libpulse_dep, libpulsecommon_dep, libpulsecore_dep ] ],
   [ 'rtstutter', 'rtstutter.c',
-    [ libpulse_dep, libpulsecommon_dep, libpulsecore_dep ] ],
+    [ thread_dep, libpulse_dep, libpulsecommon_dep, libpulsecore_dep ] ],
   [ 'sig2str-test', 'sig2str-test.c',
     [ check_dep, libpulse_dep, libpulsecommon_dep, libpulsecore_dep ] ],
   [ 'stripnul', 'stripnul.c',
@@ -193,7 +193,7 @@ foreach t : default_tests + norun_tests
   if default_tests.contains(t)
     test(name, exe,
       env : test_env,
-      timeout : 120,
+      timeout : 300,
     )
   endif
 endforeach

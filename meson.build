@@ -22,15 +22,15 @@ pa_api_version = 12
 pa_protocol_version = 33
 
 # The stable ABI for client applications, for the version info x:y:z
-# always will hold y=z
-libpulse_version_info = [21, 0, 21]
+# always will hold x=z
+libpulse_version_info = [21, 1, 21]
 
 # A simplified, synchronous, ABI-stable interface for client
-# applications, for the version info x:y:z always will hold y=z
+# applications, for the version info x:y:z always will hold x=z
 libpulse_simple_version_info = [1, 1, 1]
 
 # The ABI-stable GLib adapter for client applications, for the version
-# info x:y:z always will hold y=z
+# info x:y:z always will hold x=z
 libpulse_mainloop_glib_version_info = [0, 5, 0]
 
 libpulse_version = '@0@.@1@.@2@'.format(
@@ -167,14 +167,25 @@ elif host_machine.system() == 'windows'
 #  cdata.set('__EXTENSIONS__', 1)
 endif
 
+if cc.has_type('_Bool')
+  cdata.set('HAVE_STD_BOOL', 1)
+endif
+
+if host_machine.cpu_family() == 'x86_64' or cc.sizeof('void *') >= 8
+  cdata.set('HAVE_FAST_64BIT_OPERATIONS', 1)
+endif
+
 # Headers
 
 check_headers = [
   'arpa/inet.h',
+  'byteswap.h',
   'cpuid.h',
+  'dlfcn.h',
   'execinfo.h',
   'grp.h',
   'langinfo.h',
+  'linux/sockios.h',
   'locale.h',
   'netdb.h',
   'netinet/in.h',
@@ -186,17 +197,24 @@ check_headers = [
   'pwd.h',
   'regex.h',
   'sched.h',
+  'stdint.h',
+  'sys/atomic.h',
   'sys/capability.h',
+  'sys/conf.h',
+  'sys/dl.h',
   'sys/eventfd.h',
-  'sys/ioctl.h',
   'sys/filio.h',
+  'sys/ioctl.h',
   'sys/mman.h',
   'sys/prctl.h',
   'sys/resource.h',
   'sys/select.h',
   'sys/socket.h',
+  'sys/syscall.h',
+  'sys/uio.h',
   'sys/un.h',
   'sys/wait.h',
+  'syslog.h',
   'valgrind/memcheck.h',
   'xlocale.h',
 ]
@@ -213,40 +231,55 @@ if cc.has_header('pthread.h')
   cdata.set('HAVE_PTHREAD', 1)
 endif
 
+if cc.has_header_symbol('pthread.h', 'PTHREAD_PRIO_INHERIT')
+  cdata.set('HAVE_PTHREAD_PRIO_INHERIT', 1)
+endif
+
 # Functions
 
 check_functions = [
   'accept4',
   'clock_gettime',
+  'ctime_r',
   'fchmod',
   'fchown',
   'fork',
   'fstat',
   'getaddrinfo',
   'getgrgid_r',
+  'getgrnam_r',
   'getpwnam_r',
+  'getpwuid_r',
   'gettimeofday',
   'getuid',
+  'lrintf',
   'lstat',
   'memfd_create',
   'mkfifo',
   'mlock',
   'nanosleep',
+  'open64',
   'paccept',
   'pipe',
   'pipe2',
+  'posix_fadvise',
   'posix_madvise',
+  'posix_memalign',
+  'ppoll',
   'readlink',
   'setegid',
   'seteuid',
+  'setpgid',
   'setregid',
-  'setreuid',
   'setresgid',
   'setresuid',
+  'setreuid',
   'setsid',
   'sig2str',
   'sigaction',
+  'strerror_r',
   'strtod_l',
+  'strtof',
   'symlink',
   'sysconf',
   'uname',
@@ -275,6 +308,20 @@ if not cc.has_header_symbol('netinet/in.h', 'INADDR_NONE')
     cdata.set('INADDR_NONE', '0xffffffff')
   endif
 endif
+
+check_decls = [
+  [ 'environ', 'unistd.h', '#define _GNU_SOURCE' ],
+  [ 'SOUND_PCM_READ_RATE', 'sys/soundcard.h', '' ],
+  [ 'SOUND_PCM_READ_CHANNELS', 'sys/soundcard.h', '' ],
+  [ 'SOUND_PCM_READ_BITS', 'sys/soundcard.h', '' ],
+]
+
+foreach s : check_decls
+  if cc.has_header_symbol(s[1], s[0], prefix : s[2])
+    define = 'HAVE_DECL_' + s[0].to_upper()
+    cdata.set(define, 1)
+  endif
+endforeach
 
 # Types
 
@@ -307,7 +354,19 @@ endif
 # Core Dependencies
 
 libm_dep = cc.find_library('m', required : true)
+
 thread_dep = dependency('threads')
+foreach f : [
+  'pthread_getname_np',
+  'pthread_setaffinity_np',
+  'pthread_setname_np',
+]
+  if cc.has_function(f, dependencies : thread_dep)
+    define = 'HAVE_' + f.underscorify().to_upper()
+    cdata.set(define, 1)
+  endif
+endforeach
+
 cap_dep = cc.find_library('cap', required : false)
 
 shm_dep = cc.find_library('rt', required : false)
@@ -315,13 +374,48 @@ if shm_dep.found()
   cdata.set('HAVE_SHM_OPEN', 1)
 endif
 
+dl_dep = cc.find_library('dl', required : false)
+if dl_dep.found()
+  cdata.set('HAVE_DLADDR', 1)
+endif
+
+have_iconv = false
+if cc.has_function('iconv_open')
+  iconv_dep = dependency('', required : false)
+  have_iconv = true
+else
+  iconv_dep = cc.find_library('iconv', required : false)
+  have_iconv = iconv_dep.found()
+endif
+if have_iconv
+  cdata.set('HAVE_ICONV', 1)
+  iconvconsttest = '''#include <iconv.h>
+size_t iconv (iconv_t cd, char * *inbuf, size_t *inbytesleft, char * *outbuf, size_t *outbytesleft);
+'''
+  if cc.compiles(iconvconsttest, dependencies : iconv_dep)
+    cdata.set('ICONV_CONST', '')
+  else
+    cdata.set('ICONV_CONST', 'const')
+  endif
+endif
+
+# Atomic operations
+
+if get_option('atomic-arm-memory-barrier')
+    cdata.set('ATOMIC_ARM_MEMORY_BARRIER_ENABLED', 1)
+endif
+
+need_libatomic_ops = false
 
 atomictest = '''void func() {
   volatile int atomic = 2;
   __sync_bool_compare_and_swap (&atomic, 2, 3);
 }
 '''
+
 if cc.compiles(atomictest)
+  cdata.set('HAVE_ATOMIC_BUILTINS', 1)
+
   newatomictest = '''void func() {
     int c = 0;
     __atomic_store_n(&c, 4, __ATOMIC_SEQ_CST);
@@ -329,13 +423,76 @@ if cc.compiles(atomictest)
   '''
 
   if(cc.compiles(newatomictest))
-    cdata.set('HAVE_ATOMIC_BUILTINS_MEMORY_MODEL', true)
+    cdata.set('HAVE_ATOMIC_BUILTINS_MEMORY_MODEL', 1)
   endif
 
-  cdata.set('HAVE_ATOMIC_BUILTINS', true)
+elif host_machine.cpu_family() == 'arm'
+  if host_machine.system() == 'linux' and get_option('atomic-arm-linux-helpers')
+    cdata.set('ATOMIC_ARM_LINUX_HELPERS', 1)
+  else
+    armatomictest = '''int func() {
+      volatile int a=0;
+      int o=0, n=1, r;
+      asm volatile (
+	      "ldrex    %0, [%1]\n"
+	      "subs  %0, %0, %2\n"
+	      "strexeq %0, %3, [%1]\n"
+	      : "=&r" (r)
+	      : "r" (&a), "Ir" (o), "r" (n)
+      : "cc");
+      return (a==1 ? 0 : -1);
+    }
+    '''
+
+    if cc.compiles(armatomictest)
+      cdata.set('ATOMIC_ARM_INLINE_ASM', 1)
+    else
+      need_libatomic_ops = true
+    endif
+  endif # arm && !linux
+
+elif not ['freebsd', 'netbsd'].contains(host_machine.system())
+  need_libatomic_ops = true
+endif # !atomic helpers && !arm
+
+if need_libatomic_ops
+  assert(cc.has_header('atomic_ops.h'), 'Need libatomic_ops')
+
+  cdata.set('AO_REQUIRE_CAS', 1)
+
+  if host_machine.system() != 'windows'
+    libatomic_ops_dep = cc.find_library('atomic_ops', required : true)
+  else
+    libatomic_ops_dep = dependency('', required: false)
+  endif
 else
-  # FIXME: check if we need libatomic_ops
+  libatomic_ops_dep = dependency('', required: false)
 endif
+
+# ARM checks
+# ARMV6 instructions we need
+if host_machine.cpu_family() == 'arm'
+  armv6test = '''int func() {
+    volatile int a = -60000, b = 0xaaaabbbb, c = 0xccccdddd;
+    asm volatile ("ldr r0, %2 \n"
+                  "ldr r2, %3 \n"
+                  "ldr r3, %4 \n"
+                  "ssat r1, #8, r0 \n"
+                  "str r1, %0 \n"
+                  "pkhbt r1, r3, r2, LSL #8 \n"
+                  "str r1, %1 \n"
+                  : "=m" (a), "=m" (b)
+                  : "m" (a), "m" (b), "m" (c)
+                  : "r0", "r1", "r2", "r3", "cc");
+    return (a == -128 && b == 0xaabbdddd) ? 0 : -1;
+  }
+  '''
+
+  if cc.compiles(armv6test)
+    cdata.set('HAVE_ARMV6', 1)
+  endif
+endif
+# NEON checks are automatically done by the unstable-simd module
 
 # FIXME: make sure it's >= 2.2
 ltdl_dep = cc.find_library('ltdl', required : true)
@@ -456,9 +613,8 @@ if avahi_dep.found()
   cdata.set('HAVE_AVAHI', 1)
 endif
 
-bluez_dep = dependency('bluez', version : '>= 5.0', required : get_option('bluez5'))
 sbc_dep = dependency('sbc', version : '>= 1.0', required : false)
-if bluez_dep.found()
+if get_option('bluez5')
   assert(dbus_dep.found(), 'BlueZ requires D-Bus support')
   assert(sbc_dep.found(), 'BlueZ requires SBC support')
   cdata.set('HAVE_SBC', 1)
@@ -517,6 +673,17 @@ endif
 # Test dependencies
 
 check_dep = dependency('check', version : '>= 0.9.10', required : get_option('tests'))
+
+# Subdirs
+
+subdir('po')
+if get_option('man')
+  subdir('man')
+endif
+subdir('shell-completion/bash')
+subdir('shell-completion/zsh')
+subdir('src')
+subdir('vala')
 
 # Now generate config.h from everything above
 configure_file(output : 'config.h', configuration : cdata)
@@ -585,17 +752,6 @@ configure_file(
   install_dir : cmakedir,
 )
 
-# Subdirs
-
-subdir('po')
-if get_option('man')
-  subdir('man')
-endif
-subdir('shell-completion/bash')
-subdir('shell-completion/zsh')
-subdir('src')
-subdir('vala')
-
 ############################################################
 
 # Final summary
@@ -641,7 +797,7 @@ summary = [
   'Enable Async DNS:              @0@'.format(asyncns_dep.found()),
   'Enable LIRC:                   @0@'.format(lirc_dep.found()),
   'Enable D-Bus:                  @0@'.format(dbus_dep.found()),
-  '  Enable BlueZ 5:              @0@'.format(bluez_dep.found()),
+  '  Enable BlueZ 5:              @0@'.format(get_option('bluez5')),
   '    Enable native headsets:    @0@'.format(get_option('bluez5-native-headset')),
   '    Enable  ofono headsets:    @0@'.format(get_option('bluez5-ofono-headset')),
   'Enable udev:                   @0@'.format(udev_dep.found()),

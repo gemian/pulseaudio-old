@@ -3954,6 +3954,7 @@ prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
 pulseconfdir = @pulseconfdir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -4010,8 +4011,8 @@ EXTRA_DIST = pulse/client.conf.in pulse/version.h.in \
 	daemon/esdcompat.in daemon/start-pulseaudio-x11.in \
 	daemon/systemd/user/pulseaudio.service.in \
 	daemon/systemd/user/pulseaudio.socket utils/padsp.in \
-	utils/qpaeq daemon/pulseaudio.desktop.in map-file \
-	daemon/pulseaudio-system.conf \
+	utils/qpaeq utils/pa-info daemon/pulseaudio.desktop.in \
+	map-file daemon/pulseaudio-system.conf \
 	modules/echo-cancel/adrian-license.txt \
 	modules/gsettings/org.freedesktop.pulseaudio.gschema.xml \
 	modules/gsettings/pulseaudio.convert $(addsuffix \
@@ -4076,8 +4077,8 @@ pulseaudio_DEPENDENCIES = libpulsecore-@PA_MAJORMINOR@.la libpulsecommon-@PA_MAJ
 ###################################
 #       Utility programs          #
 ###################################
-bin_SCRIPTS = $(am__append_13) $(am__append_17) $(am__append_49) \
-	$(am__append_117)
+bin_SCRIPTS = utils/pa-info $(am__append_13) $(am__append_17) \
+	$(am__append_49) $(am__append_117)
 pacat_SOURCES = utils/pacat.c
 pacat_LDADD = $(AM_LDADD) libpulse.la libpulsecommon-@PA_MAJORMINOR@.la $(LIBSNDFILE_LIBS)
 pacat_CFLAGS = $(AM_CFLAGS) $(LIBSNDFILE_CFLAGS)

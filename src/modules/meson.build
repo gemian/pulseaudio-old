@@ -30,7 +30,7 @@ all_modules = [
   [ 'module-http-protocol-tcp', 'module-protocol-stub.c', [], ['-DUSE_PROTOCOL_HTTP', '-DUSE_TCP_SOCKETS'], [], libprotocol_http ],
   [ 'module-http-protocol-unix', 'module-protocol-stub.c', [], ['-DUSE_PROTOCOL_HTTP', '-DUSE_UNIX_SOCKETS'], [], libprotocol_http ],
   [ 'module-intended-roles', 'module-intended-roles.c' ],
-  [ 'module-ladspa-sink', 'module-ladspa-sink.c', 'ladspa.h', ['-DLADSPA_PATH="' + libdir + '/ladspa:/usr/local/lib/ladspa:/usr/lib/ladspa:/usr/local/lib64/ladspa:/usr/lib64/ladspa"'], [dbus_dep, libm_dep, ltdl_dep] ],
+  [ 'module-ladspa-sink', 'module-ladspa-sink.c', 'ladspa.h', ['-DLADSPA_PATH="' + join_paths(libdir, 'ladspa') + ':/usr/local/lib/ladspa:/usr/lib/ladspa:/usr/local/lib64/ladspa:/usr/lib64/ladspa"'], [dbus_dep, libm_dep, ltdl_dep] ],
   [ 'module-loopback', 'module-loopback.c' ],
   [ 'module-match', 'module-match.c' ],
   [ 'module-native-protocol-fd', 'module-native-protocol-fd.c', [], [], [], libprotocol_native ],
@@ -38,8 +38,6 @@ all_modules = [
   [ 'module-native-protocol-unix', 'module-protocol-stub.c', [], ['-DUSE_PROTOCOL_NATIVE', '-DUSE_UNIX_SOCKETS'], [], libprotocol_native ],
   [ 'module-null-sink', 'module-null-sink.c' ],
   [ 'module-null-source', 'module-null-source.c' ],
-  [ 'module-pipe-sink', 'module-pipe-sink.c' ],
-  [ 'module-pipe-source', 'module-pipe-source.c' ],
   [ 'module-position-event-sounds', 'module-position-event-sounds.c' ],
   [ 'module-remap-sink', 'module-remap-sink.c' ],
   [ 'module-remap-source', 'module-remap-source.c' ],
@@ -83,6 +81,13 @@ if cc.has_header('sys/soundcard.h')
   ]
 endif
 
+if cc.has_function('mkfifo')
+  all_modules += [
+    [ 'module-pipe-sink', 'module-pipe-sink.c' ],
+    [ 'module-pipe-source', 'module-pipe-source.c' ]
+  ]
+endif
+
 # Modules enabled by dependencies
 
 if alsa_dep.found()
@@ -101,7 +106,7 @@ if avahi_dep.found()
   ]
 endif
 
-if bluez_dep.found()
+if get_option('bluez5')
   subdir('bluetooth')
   all_modules += [
     [ 'module-bluetooth-discover', 'bluetooth/module-bluetooth-discover.c' ],
@@ -143,7 +148,7 @@ if gio_dep.found()
   all_modules += [
     [ 'module-gsettings',
       [ 'gsettings/module-gsettings.c', 'stdin-util.c', 'stdin-util.h' ],
-      [], ['-DPA_GSETTINGS_HELPER="' + pulselibexecdir + 'gsettings-helper"'] ]
+      [], ['-DPA_GSETTINGS_HELPER="' + join_paths(pulselibexecdir, 'gsettings-helper') + '"'] ]
   ]
 endif
 
