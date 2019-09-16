@@ -1,6 +1,8 @@
 pulseaudio (13.0-1) UNRELEASED; urgency=medium
 
   * New upstream version
+  * debian/pulseaudio-utils.install:
+    - install the new pa-info utility
 
  -- Sebastien Bacher <seb128@ubuntu.com>  Mon, 16 Sep 2019 15:06:43 +0200
 
