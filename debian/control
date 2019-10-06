@@ -41,7 +41,7 @@ Standards-Version: 4.2.1
 Rules-Requires-Root: no
 Vcs-Browser: https://salsa.debian.org/pulseaudio-team/pulseaudio
 Vcs-Git: https://salsa.debian.org/pulseaudio-team/pulseaudio.git
-Homepage: http://www.pulseaudio.org
+Homepage: https://www.pulseaudio.org
 
 Package: pulseaudio
 Architecture: any
