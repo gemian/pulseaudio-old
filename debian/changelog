@@ -1,3 +1,16 @@
+pulseaudio (13.0-3) unstable; urgency=medium
+
+  * qpaeq: migrate to python3.
+    Patch picked from Fedora and cleaned up for upstream inclusion.
+    (Closes: #937338)
+  * d/control: Remove duplicate Priority: field
+  * Add dev package information to symbols file.
+    Thanks lintian tag symbols-file-missing-build-depends-package-field
+  * Pick upstream patch disabling flat-volumes by default.
+    (Closes: #837637, #541538)
+
+ -- Felipe Sateler <fsateler@debian.org>  Fri, 25 Oct 2019 09:00:30 -0300
+
 pulseaudio (13.0-2) unstable; urgency=medium
 
   [ Andreas Henriksson ]
