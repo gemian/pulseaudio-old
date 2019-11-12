@@ -1,3 +1,10 @@
+pulseaudio (12.2-4+gemian) buster; urgency=medium
+
+  * Branched for Gemian
+  * New upstream version 12.2
+
+ -- Adam Boardman <adamboardman@gmail.com>  Tue, 4 Sep 2018 10:12:48 +0100
+
 pulseaudio (12.2-4+deb10u1) buster; urgency=medium
 
   * Pick upstream patch fixing mute state restoring (Closes: #913102)
