@@ -3,3 +3,4 @@ alsa-mixer-Update-to-support-Arctis-Pro-Wireless-headset.patch
 alsa-mixer-Add-support-for-2018-Arctis-7.patch
 Don-t-compile-with-ffast-math.patch
 sink-source-Don-t-change-suspend-cause-when-unlinking.patch
+Install-pulsecore-headers.patch
