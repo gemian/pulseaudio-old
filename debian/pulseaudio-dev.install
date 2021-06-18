@@ -1,3 +1,0 @@
-src/pulsecore/*.h usr/include/pulsecore/
-src/pulsecore/filter/*.h usr/include/pulsecore/filter/
-usr/lib/*/pkgconfig/pulsecore.pc
