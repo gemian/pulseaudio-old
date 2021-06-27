@@ -134,7 +134,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = config.h
 CONFIG_CLEAN_FILES = libpulse.pc libpulse-simple.pc \
-	libpulse-mainloop-glib.pc src/pulse/version.h \
+	libpulse-mainloop-glib.pc pulsecore.pc src/pulse/version.h \
 	PulseAudioConfig.cmake PulseAudioConfigVersion.cmake
 CONFIG_CLEAN_VPATH_FILES =
 AM_V_P = $(am__v_P_@AM_V@)
@@ -231,7 +231,7 @@ am__DIST_COMMON = $(srcdir)/Makefile.in \
 	$(srcdir)/PulseAudioConfigVersion.cmake.in \
 	$(srcdir)/config.h.in $(srcdir)/libpulse-mainloop-glib.pc.in \
 	$(srcdir)/libpulse-simple.pc.in $(srcdir)/libpulse.pc.in \
-	$(top_srcdir)/build-aux/compile \
+	$(srcdir)/pulsecore.pc.in $(top_srcdir)/build-aux/compile \
 	$(top_srcdir)/build-aux/config.guess \
 	$(top_srcdir)/build-aux/config.rpath \
 	$(top_srcdir)/build-aux/config.sub \
@@ -634,7 +634,8 @@ dist_vapi_DATA = \
 		vala/libpulse-simple.deps vala/libpulse-simple.vapi
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = libpulse.pc libpulse-simple.pc $(am__append_1)
+pkgconfig_DATA = libpulse.pc libpulse-simple.pc pulsecore.pc \
+	$(am__append_1)
 cmakedir = $(libdir)/cmake/PulseAudio
 cmake_DATA = PulseAudioConfig.cmake PulseAudioConfigVersion.cmake
 dist_bashcompletion_DATA = shell-completion/bash/pulseaudio
@@ -700,6 +701,8 @@ libpulse.pc: $(top_builddir)/config.status $(srcdir)/libpulse.pc.in
 libpulse-simple.pc: $(top_builddir)/config.status $(srcdir)/libpulse-simple.pc.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 libpulse-mainloop-glib.pc: $(top_builddir)/config.status $(srcdir)/libpulse-mainloop-glib.pc.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+pulsecore.pc: $(top_builddir)/config.status $(srcdir)/pulsecore.pc.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 src/pulse/version.h: $(top_builddir)/config.status $(top_srcdir)/src/pulse/version.h.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
