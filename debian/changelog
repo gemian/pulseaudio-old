@@ -1,4 +1,4 @@
-pulseaudio (14.2-2+gemian) buster; urgency=medium
+pulseaudio (14.2+gemian) buster; urgency=medium
 
   * Branched for Gemian
 
