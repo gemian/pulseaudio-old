@@ -1,3 +1,9 @@
+pulseaudio (16.1+dfsg1-2gemian) unstable; urgency=medium
+
+  * Updated version
+
+ -- Adam Boardman <adam@clam>  Tue, 04 Apr 2023 16:22:16 +0100
+
 pulseaudio (14.2+gemian) buster; urgency=medium
 
   * Branched for Gemian
